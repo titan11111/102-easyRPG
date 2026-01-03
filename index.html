@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF風 桃太郎クエスト - 完成版</title>
+    <style>
+        /* 全体設定 */
+        body { background-color: #000; color: #fff; font-family: 'MS Gothic', 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #game-container { width: 620px; text-align: center; }
+        .screen { display: none; }
+        .active { display: block; }
+
+        /* FF風ウィンドウ */
+        .ff-window {
+            background: linear-gradient(180deg, #00008b 0%, #000044 100%);
+            border: 3px solid #eee;
+            border-radius: 8px;
+            box-shadow: inset 0 0 5px #000;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* カスタムダイアログ */
+        #custom-dialog-overlay {
+            position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000;
+        }
+        .dialog-content {
+            width: 420px; 
+            text-align: center; 
+            background: linear-gradient(180deg, #0000bb 0%, #000044 100%);
+            border: 4px double #eee;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        #dialog-message { 
+            margin-bottom: 30px; 
+            line-height: 1.6; 
+            white-space: pre-wrap; 
+            font-size: 18px;
+            text-shadow: 2px 2px #000;
+        }
+        #dialog-ok-btn {
+            background: transparent; color: #fff; border: 1px solid #fff; padding: 8px 25px; cursor: pointer; font-size: 16px;
+        }
+
+        /* マップ */
+        #map-grid {
+            display: grid; grid-template-columns: repeat(10, 32px); gap: 2px;
+            justify-content: center; margin: 15px 0;
+            background-color: #222; border: 2px solid #555;
+        }
+        .cell { width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .cell.wall { background-color: #333; }
+        .cell.plain { background-color: #2e8b57; }
+        .cell.forest { background-color: #004d00; }
+        .cell.lava { background-color: #8b0000; }
+        .cell.mountain { background-color: #4b3621; }
+        .cell.hero { background-color: #ffd700; border-radius: 50%; color: #000; z-index: 5; }
+
+        /* 戦闘画面 */
+        #battle-screen { position: relative; width: 100%; height: 450px; background-color: #000; }
+        .enemy-area { height: 220px; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .monster-sprite { font-size: 200px; text-shadow: 0 0 15px rgba(255,0,0,0.5); }
+        .battle-ui { display: flex; height: 180px; gap: 10px; }
+        .command-box { width: 30%; text-align: left; }
+        .command-box ul { list-style: none; padding: 0; margin: 0; }
+        .command-box li { padding: 8px 15px; cursor: pointer; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .command-box li:hover { background-color: rgba(255,255,255,0.2); }
+        .command-box li::before { content: '▶ '; }
+        .status-box { width: 70%; text-align: left; font-size: 16px; overflow-y: auto; }
+        .status-row { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.2); padding: 5px 0; }
+        #battle-log {
+            position: absolute; 
+            top: -50px; /* 10px から 60px 分上に移動（10 - 60 = -50） */
+            left: 50%; 
+            transform: translateX(-50%);
+            width: 85%; 
+            background: rgba(0,0,0,0.8); 
+            padding: 10px;
+            border: 1px solid #fff; 
+            min-height: 24px; 
+            z-index: 10;
+        }
+        button { background: #444; color: #fff; border: 1px solid #fff; padding: 5px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="start-screen" class="screen active">
+        <div class="ff-window">
+            <h1>LEGEND OF MOMOTARO</h1>
+            <p>仲間を集め、鬼ヶ島の魔王を討て</p>
+            <button onclick="startGame()">冒険を始める</button>
+        </div>
+    </div>
+
+    <div id="main-screen" class="screen">
+        <div class="ff-window" style="margin-bottom:10px;"><span id="area-title">場所</span></div>
+        <div id="map-grid"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div class="ff-window" style="width: 260px; text-align: left;">
+                <div id="st-hp">HP: 100/100</div>
+                <div id="st-party">一行: 勇者</div>
+            </div>
+            <div id="town-actions" style="display:none;">
+                <button onclick="rest()">宿屋で休む</button>
+            </div>
+            <div class="controls">
+                <button onclick="moveHero(0, -1)">↑</button><br>
+                <button onclick="moveHero(-1, 0)">←</button>
+                <button onclick="moveHero(0, 1)">↓</button>
+                <button onclick="moveHero(1, 0)">→</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="battle-screen" class="screen">
+        <div id="battle-log">魔物があらわれた！</div>
+        <div class="enemy-area">
+            <div id="monster-sprite" class="monster-sprite">👾</div>
+            <div id="monster-name" style="font-size: 20px;">モンスター</div>
+        </div>
+        <div class="battle-ui">
+            <div class="ff-window command-box">
+                <ul id="command-list">
+                    <li onclick="heroTurn('attack')">たたかう</li>
+                    <li onclick="showMagicMenu()">まほう</li>
+                </ul>
+                <ul id="magic-list" style="display:none;">
+                    <li onclick="heroTurn('heal')">ヒール(5MP)</li>
+                    <li onclick="heroTurn('fire')">ファイアー(8MP)</li>
+                    <li onclick="hideMagicMenu()" style="color: #aaa;">もどる</li>
+                </ul>
+            </div>
+            <div class="ff-window status-box" id="party-status-area"></div>
+        </div>
+    </div>
+
+    <div id="ending-screen" class="screen">
+        <div class="ff-window">
+            <h1>HAPPY ENDING</h1>
+            <p>仲間と共に世界を救った！</p>
+            <button onclick="location.reload()">もう一度</button>
+        </div>
+    </div>
+
+    <div id="custom-dialog-overlay">
+        <div class="ff-window dialog-content">
+            <div id="dialog-message"></div>
+            <button id="dialog-ok-btn" onclick="closeCustomDialog()">OK</button>
+        </div>
+    </div>
+</div> 
+
+<script>
+const hero = { 
+    name: "勇者", x: 1, y: 1, hp: 100, maxHp: 100, mp: 20, maxMp: 20, 
+    atk: 15, mgc: 25, lv: 1, exp: 0, gold: 0, currentArea: "green_field"
+};
+
+const shopItems = [
+    { name: "銅の剣", price: 50, atk: 5 },
+    { name: "銀の剣", price: 150, atk: 15 },
+    { name: "黄金の剣", price: 500, atk: 50 }
+];
+
+const allyData = {
+    5: { id: "dog", name: "犬", hp: 60, maxHp: 60, atk: 12, img: "🐩", msg: "ワン！一緒に戦います！" },
+    6: { id: "bird", name: "きじ", hp: 40, maxHp: 40, atk: 20, img: "🦆", msg: "ケンケン！空から助けます！" },
+    7: { id: "monkey", name: "猿", hp: 80, maxHp: 80, atk: 10, img: "🐒", msg: "ウキッ！ボクも行くよ！" }
+};
+
+let party = [hero];
+
+const monsterTable = {
+    "green_field": [
+        { name: "ミチ生命体", hp: 30, atk: 8, exp: 40, gold: 20, img: "👽" },
+        { name: "大蛇", hp: 45, atk: 12, exp: 50, gold: 30, img: "🐍" }
+    ],
+    "dark_forest": [
+        { name: "オオオトコ", hp: 80, atk: 20, exp: 120, gold: 60, img: "🧌" },
+        { name: "静電気", hp: 60, atk: 25, exp: 100, gold: 80, img: "🧞" }
+    ],
+    "lava_cave": [
+        { name: "ドクモリ", hp: 150, atk: 35, exp: 250, gold: 120, img: "🦇" },
+        { name: "ヒトクイジャック", hp: 180, atk: 30, exp: 300, gold: 150, img: "🎃" }
+    ],
+    "demon_castle": [
+        { name: "水神", hp: 400, atk: 55, exp: 600, gold: 300, img: "🐉" },
+        { name: "ヴィラン", hp: 500, atk: 60, exp: 800, gold: 500, img: "🦹" }
+    ]
+};
+
+const worldMaps = {
+    "green_field": {
+        name: "始まりの平原",
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,3,10,10,10,10,10,10,10,0],
+            [1,10,10,10,5,10,10,10,10,1],
+            [1,2,1,1,10,1,1,1,10,1],
+            [1,8,10,10,10,10,10,10,2,1],
+            [1,1,1,10,10,10,10,1,1,1],
+            [1,10,10,2,1,1,10,10,10,1],
+            [1,10,1,1,1,10,10,1,10,1],
+            [1,10,10,10,10,10,10,10,10,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { right: "dark_forest" }
+    },
+    "dark_forest": {
+        name: "迷いの森",
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [0,11,2,11,11,6,11,11,2,1],
+            [1,11,1,1,11,1,11,1,11,1],
+            [1,11,1,11,11,2,11,1,11,1],
+            [1,2,1,11,7,1,11,1,11,1],
+            [1,11,11,11,11,11,11,11,11,0],
+            [1,1,1,1,1,1,11,1,1,1],
+            [1,11,11,11,2,11,11,1,11,1],
+            [1,11,1,1,1,1,1,1,11,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { left: "green_field", right: "lava_cave" }
+    },
+    "lava_cave": {
+        name: "火の洞窟",
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [0,12,12,12,12,12,12,2,12,1],
+            [1,1,1,1,12,1,1,1,12,1],
+            [1,2,12,12,12,1,8,12,12,1],
+            [1,12,1,1,1,1,12,1,1,1],
+            [1,12,12,12,12,2,12,12,12,0],
+            [1,1,1,1,1,1,1,1,12,1],
+            [1,2,12,12,12,12,12,2,12,1],
+            [1,12,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { left: "dark_forest", right: "demon_castle" }
+    },
+    "demon_castle": {
+        name: "魔王の山",
+        data: [
+            [1,1,1,1,4,1,1,1,1,1],
+            [1,13,13,13,13,13,13,13,13,1],
+            [1,13,1,1,1,1,1,1,13,1],
+            [1,2,1,13,13,13,13,1,2,1],
+            [1,13,13,13,1,1,13,13,13,1],
+            [0,13,1,2,1,1,2,1,13,1],
+            [1,13,1,13,13,13,13,1,13,1],
+            [1,13,13,13,1,1,13,13,13,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { left: "lava_cave" }
+    }
+};
+
+let currentEnemy = null;
+let canAttack = true;
+
+function drawMap() {
+    const mapInfo = worldMaps[hero.currentArea];
+    document.getElementById('area-title').innerText = mapInfo.name;
+    const grid = document.getElementById('map-grid');
+    grid.innerHTML = '';
+    
+    mapInfo.data.forEach((row, y) => {
+        row.forEach((type, x) => {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (type === 1) cell.classList.add('wall');
+            if (type === 10) cell.classList.add('plain');
+            if (type === 11) cell.classList.add('forest');
+            if (type === 12) cell.classList.add('lava');
+            if (type === 13) cell.classList.add('mountain');
+
+            if (x === hero.x && y === hero.y) {
+                cell.innerText = '🚶'; cell.classList.add('hero');
+            } else if (type >= 5 && type <= 7) {
+                cell.innerText = allyData[type].img;
+            } else {
+                const icons = { 2: '👾', 3: '🏠', 4: '😈', 8: '🏬', 11: '🌲', 12: '🔥', 13: '⛰️' }; 
+                cell.innerText = icons[type] || '';
+            }
+            grid.appendChild(cell);
+        });
+    });
+}
+
+function moveHero(dx, dy) {
+    let nx = hero.x + dx, ny = hero.y + dy;
+    const map = worldMaps[hero.currentArea];
+
+    // エリア移動の判定（画面外へ出ようとしたとき）
+    if (nx < 0 && map.exits.left) { 
+        hero.currentArea = map.exits.left; 
+        hero.x = 9; // 次のマップの右端から出現
+        drawMap(); updateStatus(); return;
+    }
+    if (nx > 9 && map.exits.right) { 
+        hero.currentArea = map.exits.right; 
+        hero.x = 0; // 次のマップの左端から出現
+        drawMap(); updateStatus(); return;
+    }
+
+    // 通常移動の範囲チェック
+    if (nx >= 0 && nx <= 9 && ny >= 0 && ny <= 9) {
+        const tile = map.data[ny][nx];
+        if (tile === 1) return; // 壁は進めない
+        hero.x = nx; hero.y = ny;
+        if (tile >= 5 && tile <= 7) addAlly(tile);
+        if (tile === 2) startBattle();
+        if (tile === 3) document.getElementById('town-actions').style.display = 'block';
+        else document.getElementById('town-actions').style.display = 'none';
+        if (tile === 8) showShop(); 
+        if (tile === 4) startBossBattle();
+    }
+    drawMap(); updateStatus();
+}
+
+function addAlly(type) {
+    const ally = allyData[type];
+    if (!party.find(m => m.name === ally.name)) {
+        party.push({ ...ally });
+        showAlert(`${ally.name}:「${ally.msg}」\n\n${ally.name}が仲間に加わった！`);
+        worldMaps[hero.currentArea].data[hero.y][hero.x] = 0; 
+    }
+}
+
+// --- 3. 戦闘ロジック ---
+function startBattle() {
+        // 現在のエリアのモンスターリストを取得
+        const areaMonsters = monsterTable[hero.currentArea];
+        // リストの中からランダムに1体を選択
+        const randomIndex = Math.floor(Math.random() * areaMonsters.length);
+        currentEnemy = { ...areaMonsters[randomIndex] };
+        
+        initBattle();
+    }
+
+    function startBossBattle() {
+        currentEnemy = { name: "魔王", hp: 1000, atk: 60, exp: 0, img: "👹" };
+        initBattle();
+    }
+function startBossBattle() {
+    currentEnemy = { name: "魔王", hp: 1000, atk: 60, exp: 0, img: "👹" };
+    initBattle();
+}
+function initBattle() {
+    canAttack = true;
+    document.getElementById('monster-name').innerText = currentEnemy.name;
+    document.getElementById('monster-sprite').innerText = currentEnemy.img;
+    document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
+    updateBattleStatus();
+    showScreen('battle-screen');
+}
+function updateBattleStatus() {
+    const area = document.getElementById('party-status-area');
+    area.innerHTML = '<div style="border-bottom: 1px solid #fff; margin-bottom: 5px;">NAME &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; HP</div>';
+    party.forEach(m => {
+        area.innerHTML += `<div class="status-row"><span>${m.name}</span><span>${m.hp} / ${m.maxHp}</span></div>`;
+    });
+}
+function heroTurn(action) {
+    if (!canAttack) return;
+    canAttack = false;
+    hideMagicMenu();
+    if (action === 'attack') { performAttack(hero); } 
+    else if (action === 'heal') {
+        if (hero.mp < 5) { showAlert("MPが足りません！"); canAttack = true; return; }
+        hero.mp -= 5; hero.hp = Math.min(hero.maxHp, hero.hp + 50);
+        document.getElementById('battle-log').innerText = "勇者はヒールを唱えた！回復！";
+    } 
+    else if (action === 'fire') {
+        if (hero.mp < 8) { showAlert("MPが足りません！"); canAttack = true; return; }
+        hero.mp -= 8; performAttack(hero, true);
+    }
+    if (currentEnemy.hp > 0) setTimeout(partyTurn, 800);
+    else setTimeout(winBattle, 800);
+}
+function partyTurn() {
+        let index = 1; // 0番目は勇者なので1番目（仲間）から開始
+        
+        function nextAlly() {
+            // 1. まず敵がすでに倒されていないかチェック
+            if (currentEnemy.hp <= 0) {
+                winBattle();
+                return;
+            }
+
+            // 2. まだ仲間が残っているかチェック
+            if (index < party.length) {
+                const member = party[index];
+                if (member.hp > 0) {
+                    performAttack(member);
+                    index++;
+                    // 次の仲間の行動まで少し待機
+                    setTimeout(nextAlly, 800);
+                } else {
+                    // 仲間が戦闘不能なら次の人へ
+                    index++;
+                    nextAlly();
+                }
+            } else {
+                // 3. 全員の行動が終わって、まだ敵が生きていれば敵のターンへ
+                if (currentEnemy.hp > 0) {
+                    setTimeout(enemyTurn, 800);
+                } else {
+                    winBattle();
+                }
+            }
+        }
+        nextAlly();
+    }
+function performAttack(attacker, isMagic = false) {
+    let dmg = isMagic ? hero.mgc : attacker.atk + Math.floor(Math.random() * 10);
+    currentEnemy.hp -= dmg;
+    document.getElementById('battle-log').innerText = `${attacker.name}の攻撃！${currentEnemy.name}に${dmg}のダメージ！`;
+    updateBattleStatus();
+}
+function enemyTurn() {
+    const target = party[Math.floor(Math.random() * party.length)];
+    let dmg = Math.max(1, currentEnemy.atk - 5);
+    target.hp -= dmg;
+    document.getElementById('battle-log').innerText = `${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`;
+    updateBattleStatus();
+    if (hero.hp <= 0) { showAlert("勇者が力尽きた..."); setTimeout(() => location.reload(), 2000); }
+    else { setTimeout(() => { canAttack = true; document.getElementById('battle-log').innerText = "コマンドを選んでください"; }, 800); }
+}
+function winBattle() {
+    if (currentEnemy.name === "魔王") showScreen('ending-screen');
+    else {
+        document.getElementById('battle-log').innerText = `${currentEnemy.name}を倒した！ ${currentEnemy.gold}Gを手に入れた！`;
+        hero.exp += currentEnemy.exp;
+        hero.gold += currentEnemy.gold; 
+        worldMaps[hero.currentArea].data[hero.y][hero.x] = 0;
+        checkLevelUp();
+        setTimeout(() => { showScreen('main-screen'); drawMap(); updateStatus(); }, 1200);
+    }
+}
+function showMagicMenu() { document.getElementById('command-list').style.display='none'; document.getElementById('magic-list').style.display='block'; }
+function hideMagicMenu() { document.getElementById('command-list').style.display='block'; document.getElementById('magic-list').style.display='none'; }
+function checkLevelUp() { if (hero.exp >= hero.lv * 100) { hero.lv++; hero.atk += 10; hero.maxHp += 20; hero.hp = hero.maxHp; showAlert(`レベルアップ！\nレベル ${hero.lv} になった！`); } }
+function rest() { hero.hp = hero.maxHp; hero.mp = hero.maxMp; updateStatus(); showAlert("宿屋で休んで全快した！"); }
+function updateStatus() { document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G`; document.getElementById('st-party').innerText = "一行: " + party.map(m => m.name).join(", "); }
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function startGame() { showScreen('main-screen'); drawMap(); updateStatus(); }
+function showShop() {
+    let msg = "武器屋へようこそ！\n";
+    shopItems.forEach((item, index) => { msg += `${index}: ${item.name} (${item.price}G) [+${item.atk}]\n`; });
+    const choice = prompt(msg);
+    if (choice !== null && shopItems[choice]) {
+        const item = shopItems[choice];
+        if (hero.gold >= item.price) { hero.gold -= item.price; hero.atk += item.atk; showAlert(`${item.name}を購入！`); updateStatus(); }
+        else { showAlert("ゴールドが足りません！"); }
+    }
+}
+function showAlert(text) { document.getElementById('dialog-message').innerText = text; document.getElementById('custom-dialog-overlay').style.display = 'flex'; }
+function closeCustomDialog() { document.getElementById('custom-dialog-overlay').style.display = 'none'; }
+</script>
+</body>
+</html>
