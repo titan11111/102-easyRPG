@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>魔の山（優しいRPG - 拡張版）</title>
+    <title>魔の山（拡張版：桃仙人の試練）</title>
     <style>
         /* 全体設定 */
         body { 
@@ -113,6 +113,9 @@
         .cell.forest { background-color: #004d00; }
         .cell.lava { background-color: #8b0000; }
         .cell.mountain { background-color: #4b3621; }
+        .cell.wasteland { background-color: #554433; } /* 無法の荒地の色 */
+        .cell.desert { background-color: #c2b280; } /* 砂漠の色 */
+        .cell.ruins { background-color: #444; } /* かつての村の床 */
         .cell.hero { 
             background-color: #ffd700; 
             border-radius: 50%; 
@@ -305,7 +308,7 @@
     <div id="battle-screen" class="screen">
         <div id="battle-log">魔物があらわれた！</div>
         <div class="enemy-area">
-            <div id="monster-sprite" class="monster-sprite">👾</div>
+            <div id="monster-sprite" class="monster-sprite"></div>
             <div id="monster-name">モンスター</div>
         </div>
         <div class="battle-ui">
@@ -353,7 +356,7 @@
 /* --- ゲームデータ --- */
 const hero = { 
     name: "勇者", 
-    x: 4, // 町の中央付近からスタート
+    x: 4, 
     y: 7, 
     hp: 100, 
     maxHp: 100, 
@@ -382,12 +385,23 @@ const allyData = {
 
 let party = [hero];
 let trueKingMet = false; 
-let prologueStep = 0; // 会話の進行度管理用
+let prologueStep = 0;
 
 const monsterTable = {
     "green_field": [
         { name: "ミチ生命体", hp: 30, atk: 8, exp: 40, gold: 20, img: "👽" }, 
         { name: "大蛇", hp: 45, atk: 12, exp: 50, gold: 30, img: "🐍" }
+    ],
+    "wasteland": [
+        { name: "ならず者", hp: 60, atk: 15, exp: 60, gold: 40, img: "🤠" },
+        { name: "ハゲタカ", hp: 50, atk: 18, exp: 70, gold: 30, img: "🦅" }
+    ],
+    "lonely_desert": [
+        { name: "サソリ", hp: 70, atk: 22, exp: 90, gold: 50, img: "🦂" },
+        { name: "ミイラ", hp: 90, atk: 18, exp: 110, gold: 60, img: "🧟" }
+    ],
+    "ruined_village": [
+        { name: "うらみ", hp: 100, atk: 25, exp: 150, gold: 80, img: "👻" }
     ],
     "dark_forest": [
         { name: "オオオトコ", hp: 80, atk: 20, exp: 120, gold: 60, img: "🧌" }, 
@@ -415,7 +429,7 @@ const worldMaps = {
             [1,0,0,0,0,0,0,0,0,1],
             [1,0,0,0,0,0,0,15,0,1],
             [1,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,0,0,1,1,1,1], // 出口をプロローグ後に開ける
+            [1,1,1,1,0,0,1,1,1,1],
             [1,1,1,1,0,0,1,1,1,1]
         ],
         exits: { bottom: "green_field" },
@@ -436,9 +450,57 @@ const worldMaps = {
             [1,10,10,10,1,1,10,10,10,1],
             [1,10,1,1,1,10,10,1,10,1],
             [1,10,10,10,10,10,10,10,10,1],
-            [1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,0,0,1,1,1,1] 
         ], 
-        exits: { right: "dark_forest" } 
+        exits: { right: "dark_forest", top: "town_inside", bottom: "wasteland" } 
+    },
+    "wasteland": {
+        name: "無法の荒地",
+        data: [
+            [1,1,1,1,0,0,1,1,1,1],
+            [1,20,20,20,20,20,2,20,20,1],
+            [1,20,1,1,20,1,1,20,20,1],
+            [1,20,20,20,20,20,20,20,20,0], 
+            [1,20,1,1,1,20,20,1,1,1],
+            [1,2,20,20,20,20,20,20,20,1],
+            [1,20,1,1,20,1,1,1,20,1],
+            [1,20,20,20,20,20,20,20,20,1],
+            [1,20,20,2,20,20,20,2,20,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { top: "green_field", right: "lonely_desert" }
+    },
+    "lonely_desert": {
+        name: "寂しい砂漠",
+        data: [
+            [1,1,1,1,0,0,1,1,1,1], 
+            [1,21,21,21,21,21,21,21,21,1],
+            [1,21,1,1,1,1,1,1,21,1],
+            [0,21,1,21,21,21,21,1,21,1], 
+            [1,21,1,21,25,21,21,1,21,1], // 25: かつての村の入り口 (🏚️)
+            [1,21,1,21,21,21,21,1,21,1],
+            [1,21,1,1,1,1,1,1,21,1],
+            [1,21,21,2,21,21,21,21,21,1],
+            [1,21,21,21,21,2,21,21,21,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { left: "wasteland", top: "dark_forest" }
+    },
+    "ruined_village": {
+        name: "かつての村",
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,22,22,22,22,22,22,22,22,1],
+            [1,22,1,1,22,22,1,1,22,1],
+            [1,22,1,23,22,22,24,1,22,1], // 23:お化け, 24:桃仙人
+            [1,22,22,22,22,22,22,22,22,1],
+            [1,22,22,1,1,1,1,22,22,1],
+            [1,22,22,22,22,22,22,22,22,1],
+            [1,1,22,22,22,22,22,22,1,1],
+            [1,1,1,1,0,0,1,1,1,1], // 下から砂漠に戻る
+            [1,1,1,1,1,1,1,1,1,1]
+        ],
+        exits: { bottom: "lonely_desert" }
     },
     "dark_forest": { 
         name: "迷いの森", 
@@ -452,9 +514,9 @@ const worldMaps = {
             [1,1,1,1,1,1,11,1,1,1],
             [1,11,11,11,2,11,11,1,11,1],
             [1,11,1,1,1,1,1,1,11,1],
-            [1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,0,0,1,1,1,1] 
         ], 
-        exits: { left: "green_field", right: "lava_cave" } 
+        exits: { left: "green_field", right: "lava_cave", bottom: "lonely_desert" } 
     },
     "lava_cave": { 
         name: "火の洞窟", 
@@ -567,6 +629,9 @@ function drawMap() {
             if (type === 11) cell.classList.add('forest');
             if (type === 12) cell.classList.add('lava');
             if (type === 13) cell.classList.add('mountain');
+            if (type === 20) cell.classList.add('wasteland');
+            if (type === 21) cell.classList.add('desert');
+            if (type === 22) cell.classList.add('ruins');
 
             if (x === hero.x && y === hero.y) {
                 cell.innerText = '🚶';
@@ -576,7 +641,8 @@ function drawMap() {
             } else {
                 const icons = { 
                     2: '👾', 3: '🏰', 4: '👹', 8: '🏬', 
-                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '🗃️'
+                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '🗃️',
+                    23: '👻', 24: '🍑', 25: '🏚️'
                 }; 
                 if (mapInfo.npcs) {
                     const npc = mapInfo.npcs.find(n => n.x === x && n.y === y);
@@ -598,6 +664,7 @@ function moveHero(dx, dy) {
     let ny = hero.y + dy;
     const map = worldMaps[hero.currentArea];
 
+    // エリア移動処理
     if (nx < 0 && map.exits.left) { 
         hero.currentArea = map.exits.left; 
         hero.x = 9; 
@@ -610,12 +677,13 @@ function moveHero(dx, dy) {
     }
     if (ny > 9 && map.exits.bottom) {
         hero.currentArea = map.exits.bottom;
-        hero.x = 4;
+        hero.x = (hero.currentArea === "lonely_desert") ? 4 : nx;
         hero.y = 0; 
         return afterMove();
     }
     if (ny < 0 && map.exits.top) {
         hero.currentArea = map.exits.top;
+        hero.x = nx; 
         hero.y = 9;
         return afterMove();
     }
@@ -636,6 +704,14 @@ function moveHero(dx, dy) {
 
         hero.x = nx; 
         hero.y = ny;
+
+        if (tile === 25) { // 村への入り口
+            hero.currentArea = "ruined_village";
+            hero.x = 4;
+            hero.y = 7;
+            showAlert("かつての村に入った...");
+            return afterMove();
+        }
 
         if (tile === 3) {
             if (trueKingMet) {
@@ -664,8 +740,10 @@ function moveHero(dx, dy) {
         }
         if (tile === 8) showShop(); 
         if (tile === 4) triggerBossEvent();
+        if (tile === 23) showAlert("幽霊:「ここはかつての村…すべては魔王に奪われた…」");
+        if (tile === 24) startMomoBattle();
 
-        if ((tile === 10 || tile === 11) && Math.random() < 0.15) {
+        if ((tile === 10 || tile === 11 || tile === 20 || tile === 21 || tile === 22) && Math.random() < 0.15) {
             startBattle();
         }
     }
@@ -708,7 +786,6 @@ function addAlly(type) {
 /* --- シナリオイベント --- */
 function startPrologue() {
     const textElem = document.getElementById('prologue-text');
-    
     if (prologueStep === 0) {
         let name = prompt("お主の名前を教えてくれ（カタカナ4文字以内）", "ユウシャ");
         if (!name) name = "ユウシャ";
@@ -725,7 +802,6 @@ function startPrologue() {
         textElem.innerText = `王様：「${hero.name}よ、川上を調べてきてはくれまいか？」`;
         prologueStep++;
     } else {
-        // フィールド画面へ移行
         showScreen('main-screen');
         drawMap();
         updateStatus();
@@ -734,14 +810,14 @@ function startPrologue() {
 }
 
 function triggerBossEvent() {
-    const choice = confirm("なんと水源に魔王らしきものがいます。\n戦いますか？\n[ OK: はい / キャンセル: いいえ ]");
+    const choice = confirm("水源に魔王がいます。戦いますか？");
     if (choice) {
         startBossBattle();
     } else {
-        const joinChoice = confirm("えっ、王様に言われた？わしがちょっと前まで王様じゃったが、、、、\nちょうどよい。水源に大きな岩が落ちてきて困っておった。一緒にどかしてくれんか？\n[ OK: はい / キャンセル: いや、戦う ]");
+        const joinChoice = confirm("私が元王様だ。水源の岩をどかすのを手伝ってくれんか？");
         if (joinChoice) {
             trueKingMet = true;
-            showAlert("ありがとう。わしは山暮らしに憧れて王を引退したのじゃ。\n街の王はおそらく偽物じゃ。\n懲らしめてほしい。");
+            showAlert("ありがとう。街の王は偽物だ。懲らしめてくれ。");
         } else {
             startBossBattle();
         }
@@ -749,7 +825,7 @@ function triggerBossEvent() {
 }
 
 function startNiseousamaBattle() {
-    showAlert("オウサマニア:「バレたか。のたれ死んでおけばよいものを。\nわしは王様になるのが趣味なんじゃ。\n邪魔者は消えよ！！！！」");
+    showAlert("オウサマニア:「バレたか。邪魔者は消えよ！！！！」");
     isBattle = true;
     isBattleEnding = false;
     currentEnemy = { 
@@ -758,7 +834,22 @@ function startNiseousamaBattle() {
         atk: 70, 
         exp: 0, 
         gold: 0, 
-        img: '<img src="niseousama.jpg" alt="niseousama">' 
+        img: '🤴' 
+    };
+    initBattle();
+}
+
+function startMomoBattle() {
+    showAlert("桃仙人:「かつての村を荒らすのはお主か？ 試練を与えよう！」");
+    isBattle = true;
+    isBattleEnding = false;
+    currentEnemy = { 
+        name: "桃仙人", 
+        hp: 800, 
+        atk: 45, 
+        exp: 1000, 
+        gold: 500, 
+        img: '🍑' 
     };
     initBattle();
 }
@@ -783,7 +874,7 @@ function startBossBattle() {
 function initBattle() {
     canAttack = true;
     document.getElementById('monster-name').innerText = currentEnemy.name;
-    document.getElementById('monster-sprite').innerHTML = typeof currentEnemy.img === 'string' && currentEnemy.img.includes('<img') ? currentEnemy.img : currentEnemy.img;
+    document.getElementById('monster-sprite').innerHTML = currentEnemy.img;
     document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
     updateBattleStatus();
     showScreen('battle-screen');
@@ -836,11 +927,9 @@ function performAttack(attacker) {
 function enemyTurn() {
     const aliveMembers = party.filter(m => m.hp > 0);
     if (aliveMembers.length === 0) return; 
-
     const target = aliveMembers[Math.floor(Math.random() * aliveMembers.length)];
     let dmg = Math.max(1, currentEnemy.atk - 5);
     target.hp -= dmg;
-
     document.getElementById('battle-log').innerText = `${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`;
     updateBattleStatus();
 
@@ -871,10 +960,15 @@ function confirmBattleResult() {
         document.getElementById('ending-msg').innerText = `偽の王を追い出し、本物の王が街に戻った！`;
         showScreen('ending-screen');
     } else {
+        if (currentEnemy.name === "桃仙人") {
+            showAlert("桃仙人:「見事だ。お主に真の力を授けよう。」\n勇者の攻撃力が大幅にアップした！");
+            hero.atk += 30;
+            worldMaps["ruined_village"].data[3][6] = 22; // 桃仙人を床に戻す
+        }
         hero.exp += currentEnemy.exp;
         hero.gold += (currentEnemy.gold || 0); 
         const map = worldMaps[hero.currentArea];
-        if (map.data[hero.y][hero.x] === 2) map.data[hero.y][hero.x] = 0;
+        if (map.data[hero.y][hero.x] === 2) map.data[hero.y][hero.x] = 22;
         showScreen('main-screen'); 
         drawMap(); 
         updateStatus();
