@@ -56,20 +56,18 @@
             box-sizing: border-box;
         }
 
-        /* カスタムダイアログの修正 */
+        /* カスタムダイアログ */
         #custom-dialog-overlay {
             position: fixed; 
             top: 0; 
             left: 0; 
             width: 100%; 
-            /* コントロールパネルを覆わないように高さを調整 */
             height: calc(100% - 220px); 
             background: rgba(0,0,0,0.7); 
             display: none; 
             justify-content: center; 
             align-items: center; 
             z-index: 1000; 
-            /* 下にある要素（ボタン以外）を触れないようにする */
             pointer-events: auto; 
         }
 
@@ -143,6 +141,12 @@
             text-shadow: 0 0 15px rgba(255,0,0,0.5); 
         }
 
+        .monster-sprite img {
+            width: 160px;
+            height: 160px;
+            object-fit: contain;
+        }
+
         .battle-ui { 
             display: flex; 
             height: 120px; 
@@ -181,7 +185,7 @@
             overflow: hidden; 
         }
 
-        /* コントロールパネルの修正 */
+        /* コントロールパネル */
         #control-panel {
             flex-shrink: 0; 
             height: 220px; 
@@ -195,7 +199,6 @@
             touch-action: manipulation;
             padding-bottom: env(safe-area-inset-bottom);
             position: relative;
-            /* ダイアログよりも手前に配置して常に触れるようにする */
             z-index: 2000; 
         }
 
@@ -272,7 +275,16 @@
         <div class="ff-window">
             <h1>LEGEND OF INUSARUKIGI</h1>
             <p>仲間を集め、魔王を討て</p>
+            <p style="color: #ff0;"></p>
             <p>【Aボタンで開始】</p>
+        </div>
+    </div>
+
+    <div id="prologue-screen" class="screen">
+        <div class="ff-window">
+            <div style="font-size: 160px; margin-bottom: 20px;">🕴️</div>
+            <p id="prologue-text">「わしは王様じゃ。えっと、、、お主は？」</p>
+            <p>【Aボタンで名前を教える】</p>
         </div>
     </div>
 
@@ -286,7 +298,7 @@
             <div id="st-party">一行: 勇者</div>
         </div>
         <div id="town-actions" style="display:none; margin-top: 10px;">
-            <div class="ff-window">宿屋があります (Aボタンで休憩)</div>
+            <div class="ff-window">宿屋があります</div>
         </div>
     </div>
 
@@ -308,8 +320,8 @@
 
     <div id="ending-screen" class="screen">
         <div class="ff-window">
-            <h1>HAPPY ENDING</h1>
-            <p>仲間と共に世界を救った！</p>
+            <h1 id="ending-title">HAPPY ENDING</h1>
+            <p id="ending-msg">仲間と共に世界を救った！</p>
             <p>平和な日々が戻ってきた...</p>
             <p>【Aボタンでタイトルへ】</p>
         </div>
@@ -318,7 +330,7 @@
     <div id="custom-dialog-overlay">
         <div class="ff-window dialog-content">
             <div id="dialog-message" style="margin-bottom: 20px; line-height: 1.5;"></div>
-            <div style="font-size: 12px; color: #ccc;">[ Aボタンで閉じる ]</div>
+            <div id="dialog-footer" style="font-size: 12px; color: #ccc;">[ Aボタンで閉じる ]</div>
         </div>
     </div>
 </div>
@@ -341,8 +353,8 @@
 /* --- ゲームデータ --- */
 const hero = { 
     name: "勇者", 
-    x: 1, 
-    y: 1, 
+    x: 4, // 町の中央付近からスタート
+    y: 7, 
     hp: 100, 
     maxHp: 100, 
     mp: 20, 
@@ -352,7 +364,7 @@ const hero = {
     lv: 1, 
     exp: 0, 
     gold: 0, 
-    currentArea: "green_field",
+    currentArea: "town_inside",
     hasKey: false 
 };
 
@@ -369,6 +381,8 @@ const allyData = {
 };
 
 let party = [hero];
+let trueKingMet = false; 
+let prologueStep = 0; // 会話の進行度管理用
 
 const monsterTable = {
     "green_field": [
@@ -390,22 +404,6 @@ const monsterTable = {
 };
 
 const worldMaps = {
-    "green_field": { 
-        name: "始まりの平原", 
-        data: [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,0,10,10,10,10,10,10,10,0],
-            [1,10,10,10,5,10,10,10,10,1],
-            [1,2,1,1,10,1,1,1,10,1],
-            [1,10,10,10,10,10,10,10,14,1],
-            [1,1,1,10,3,10,10,1,1,1],
-            [1,10,10,10,1,1,10,10,10,1],
-            [1,10,1,1,1,10,10,1,10,1],
-            [1,10,10,10,10,10,10,10,10,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ], 
-        exits: { right: "dark_forest" } 
-    },
     "town_inside": {
         name: "ポチの村",
         data: [
@@ -417,7 +415,7 @@ const worldMaps = {
             [1,0,0,0,0,0,0,0,0,1],
             [1,0,0,0,0,0,0,15,0,1],
             [1,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,0,0,1,1,1,1],
+            [1,1,1,1,0,0,1,1,1,1], // 出口をプロローグ後に開ける
             [1,1,1,1,0,0,1,1,1,1]
         ],
         exits: { bottom: "green_field" },
@@ -425,6 +423,22 @@ const worldMaps = {
             { x: 4, y: 3, img: "👳", msg: "この村の北東に『古い鍵』が隠されているらしいぞ。" },
             { x: 7, y: 6, img: "👧", msg: "魔王の城の門には、鍵がかかっているの。" }
         ]
+    },
+    "green_field": { 
+        name: "始まりの平原", 
+        data: [
+            [1,1,1,1,0,0,1,1,1,1],
+            [1,0,10,10,10,10,10,10,10,0],
+            [1,10,10,10,5,10,10,10,10,1],
+            [1,2,1,1,10,1,1,1,10,1],
+            [1,10,10,10,10,10,10,10,14,1],
+            [1,1,1,10,3,10,10,1,1,1],
+            [1,10,10,10,1,1,10,10,10,1],
+            [1,10,1,1,1,10,10,1,10,1],
+            [1,10,10,10,10,10,10,10,10,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ], 
+        exits: { right: "dark_forest" } 
     },
     "dark_forest": { 
         name: "迷いの森", 
@@ -485,25 +499,30 @@ let isBattleEnding = false;
 /* --- コントローラー処理 --- */
 function handleMove(dx, dy) {
     if (isBattle) return;
-    // ダイアログが出ている間は移動を止める
     if (document.getElementById('custom-dialog-overlay').style.display === 'flex') return;
+    if (document.getElementById('prologue-screen').classList.contains('active')) return;
     moveHero(dx, dy);
 }
 
 function handleA() {
     const startScreen = document.getElementById('start-screen');
+    const prologueScreen = document.getElementById('prologue-screen');
     const dialogOverlay = document.getElementById('custom-dialog-overlay');
     const townActions = document.getElementById('town-actions');
     const endingScreen = document.getElementById('ending-screen');
 
-    // 1. ダイアログが表示されている場合は閉じる
     if (dialogOverlay.style.display === 'flex') {
         closeCustomDialog();
         return;
     }
 
     if (startScreen.classList.contains('active')) {
-        startGame();
+        showScreen('prologue-screen');
+        return;
+    }
+
+    if (prologueScreen.classList.contains('active')) {
+        startPrologue();
         return;
     }
 
@@ -528,7 +547,7 @@ function handleA() {
 }
 
 function handleB() {
-    console.log("Bボタンが押されました");
+    console.log("Bボタン");
 }
 
 /* --- ゲームロジック --- */
@@ -556,8 +575,8 @@ function drawMap() {
                 cell.innerText = allyData[type].img;
             } else {
                 const icons = { 
-                    2: '👾', 3: '🏠', 4: '👹', 8: '🏬', 
-                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '📦'
+                    2: '👾', 3: '🏰', 4: '👹', 8: '🏬', 
+                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '🗃️'
                 }; 
                 if (mapInfo.npcs) {
                     const npc = mapInfo.npcs.find(n => n.x === x && n.y === y);
@@ -592,7 +611,12 @@ function moveHero(dx, dy) {
     if (ny > 9 && map.exits.bottom) {
         hero.currentArea = map.exits.bottom;
         hero.x = 4;
-        hero.y = 6;
+        hero.y = 0; 
+        return afterMove();
+    }
+    if (ny < 0 && map.exits.top) {
+        hero.currentArea = map.exits.top;
+        hero.y = 9;
         return afterMove();
     }
 
@@ -614,16 +638,16 @@ function moveHero(dx, dy) {
         hero.y = ny;
 
         if (tile === 3) {
-            hero.currentArea = "town_inside";
-            hero.x = 4;
-            hero.y = 8;
+            if (trueKingMet) {
+                startNiseousamaBattle();
+                return;
+            } else {
+                showAlert("今は忙しい。川を調べてきてくれ。");
+                hero.y++; 
+            }
         }
-        if (tile >= 5 && tile <= 7) {
-            addAlly(tile);
-        }
-        if (tile === 2) {
-            startBattle();
-        }
+        if (tile >= 5 && tile <= 7) addAlly(tile);
+        if (tile === 2) startBattle();
         if (tile === 14) {
             hero.gold += 100;
             showAlert("宝箱を開けた！\n100ゴールド手に入れた！");
@@ -638,12 +662,8 @@ function moveHero(dx, dy) {
             const npc = map.npcs.find(n => n.x === nx && n.y === ny);
             if (npc) showAlert(npc.msg);
         }
-        if (tile === 8) {
-            showShop(); 
-        }
-        if (tile === 4) {
-            startBossBattle();
-        }
+        if (tile === 8) showShop(); 
+        if (tile === 4) triggerBossEvent();
 
         if ((tile === 10 || tile === 11) && Math.random() < 0.15) {
             startBattle();
@@ -685,6 +705,64 @@ function addAlly(type) {
     }
 }
 
+/* --- シナリオイベント --- */
+function startPrologue() {
+    const textElem = document.getElementById('prologue-text');
+    
+    if (prologueStep === 0) {
+        let name = prompt("お主の名前を教えてくれ（カタカナ4文字以内）", "ユウシャ");
+        if (!name) name = "ユウシャ";
+        hero.name = name.substring(0, 4);
+        textElem.innerText = `王様：「そうじゃった、${hero.name}よ。頼みがある。」`;
+        prologueStep++;
+    } else if (prologueStep === 1) {
+        textElem.innerText = "王様：「最近、街の川の流れが悪くなっておるのじゃ。」";
+        prologueStep++;
+    } else if (prologueStep === 2) {
+        textElem.innerText = "王様：「何者かが川上で悪さをしているのかもしれん。」";
+        prologueStep++;
+    } else if (prologueStep === 3) {
+        textElem.innerText = `王様：「${hero.name}よ、川上を調べてきてはくれまいか？」`;
+        prologueStep++;
+    } else {
+        // フィールド画面へ移行
+        showScreen('main-screen');
+        drawMap();
+        updateStatus();
+        showAlert("王様に頼まれ、冒険が始まった！");
+    }
+}
+
+function triggerBossEvent() {
+    const choice = confirm("なんと水源に魔王らしきものがいます。\n戦いますか？\n[ OK: はい / キャンセル: いいえ ]");
+    if (choice) {
+        startBossBattle();
+    } else {
+        const joinChoice = confirm("えっ、王様に言われた？わしがちょっと前まで王様じゃったが、、、、\nちょうどよい。水源に大きな岩が落ちてきて困っておった。一緒にどかしてくれんか？\n[ OK: はい / キャンセル: いや、戦う ]");
+        if (joinChoice) {
+            trueKingMet = true;
+            showAlert("ありがとう。わしは山暮らしに憧れて王を引退したのじゃ。\n街の王はおそらく偽物じゃ。\n懲らしめてほしい。");
+        } else {
+            startBossBattle();
+        }
+    }
+}
+
+function startNiseousamaBattle() {
+    showAlert("オウサマニア:「バレたか。のたれ死んでおけばよいものを。\nわしは王様になるのが趣味なんじゃ。\n邪魔者は消えよ！！！！」");
+    isBattle = true;
+    isBattleEnding = false;
+    currentEnemy = { 
+        name: "オウサマニア", 
+        hp: 1200, 
+        atk: 70, 
+        exp: 0, 
+        gold: 0, 
+        img: '<img src="niseousama.jpg" alt="niseousama">' 
+    };
+    initBattle();
+}
+
 /* --- 戦闘システム --- */
 function startBattle() {
     isBattle = true;
@@ -705,7 +783,7 @@ function startBossBattle() {
 function initBattle() {
     canAttack = true;
     document.getElementById('monster-name').innerText = currentEnemy.name;
-    document.getElementById('monster-sprite').innerText = currentEnemy.img;
+    document.getElementById('monster-sprite').innerHTML = typeof currentEnemy.img === 'string' && currentEnemy.img.includes('<img') ? currentEnemy.img : currentEnemy.img;
     document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
     updateBattleStatus();
     showScreen('battle-screen');
@@ -735,26 +813,14 @@ function heroTurn(action) {
 function partyTurn() {
     let index = 1;
     function nextAlly() {
-        if (currentEnemy.hp <= 0) { 
-            winBattle(); 
-            return; 
-        }
+        if (currentEnemy.hp <= 0) { winBattle(); return; }
         if (index < party.length) {
             const member = party[index];
-            if (member.hp > 0) { 
-                performAttack(member); 
-                index++; 
-                setTimeout(nextAlly, 800); 
-            } else { 
-                index++; 
-                nextAlly(); 
-            }
+            if (member.hp > 0) { performAttack(member); index++; setTimeout(nextAlly, 800); }
+            else { index++; nextAlly(); }
         } else {
-            if (currentEnemy.hp > 0) {
-                setTimeout(enemyTurn, 800);
-            } else {
-                winBattle();
-            }
+            if (currentEnemy.hp > 0) setTimeout(enemyTurn, 800);
+            else winBattle();
         }
     }
     nextAlly();
@@ -798,15 +864,17 @@ function confirmBattleResult() {
     isBattle = false;
     isBattleEnding = false;
     if (currentEnemy.name === "魔王") {
+        document.getElementById('ending-msg').innerText = `こうして街の川は穏やかな流れを取り戻した。`;
+        showScreen('ending-screen');
+    } else if (currentEnemy.name === "オウサマニア") {
+        document.getElementById('ending-title').innerText = "TRUE ENDING";
+        document.getElementById('ending-msg').innerText = `偽の王を追い出し、本物の王が街に戻った！`;
         showScreen('ending-screen');
     } else {
         hero.exp += currentEnemy.exp;
         hero.gold += (currentEnemy.gold || 0); 
         const map = worldMaps[hero.currentArea];
-        if (map.data[hero.y][hero.x] === 2) {
-            map.data[hero.y][hero.x] = 0;
-        }
-        
+        if (map.data[hero.y][hero.x] === 2) map.data[hero.y][hero.x] = 0;
         showScreen('main-screen'); 
         drawMap(); 
         updateStatus();
@@ -834,37 +902,12 @@ function rest() {
 
 function updateStatus() { 
     document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G | 鍵: ${hero.hasKey ? '持' : '無'}`; 
-    document.getElementById('st-party').innerText = "一行: " + party.map(m => m.name).join(", "); 
+    document.getElementById('st-party').innerText = `一行: [${hero.name}] ` + party.slice(1).map(m => m.name).join(", "); 
 }
 
 function showScreen(id) { 
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
     document.getElementById(id).classList.add('active'); 
-}
-
-function startGame() { 
-    showScreen('main-screen'); 
-    drawMap(); 
-    updateStatus(); 
-}
-
-function showShop() {
-    let msg = "武器屋 (番号入力):\n";
-    shopItems.forEach((item, index) => { 
-        msg += `${index}: ${item.name} (${item.price}G)\n`; 
-    });
-    const choice = prompt(msg);
-    if (choice !== null && shopItems[choice]) {
-        const item = shopItems[choice];
-        if (hero.gold >= item.price) { 
-            hero.gold -= item.price; 
-            hero.atk += item.atk; 
-            showAlert(`${item.name}を購入！`); 
-            updateStatus(); 
-        } else { 
-            showAlert("ゴールドが足りません！"); 
-        }
-    }
 }
 
 function showAlert(text) { 
@@ -876,10 +919,22 @@ function closeCustomDialog() {
     document.getElementById('custom-dialog-overlay').style.display = 'none'; 
 }
 
-// iOS Safariでの画面スクロールを完全に禁止
-document.addEventListener('touchmove', function(e) { 
-    e.preventDefault(); 
-}, { passive: false });
+function showShop() {
+    let msg = "武器屋 (番号入力):\n";
+    shopItems.forEach((item, index) => { msg += `${index}: ${item.name} (${item.price}G)\n`; });
+    const choice = prompt(msg);
+    if (choice !== null && shopItems[choice]) {
+        const item = shopItems[choice];
+        if (hero.gold >= item.price) { 
+            hero.gold -= item.price; 
+            hero.atk += item.atk; 
+            showAlert(`${item.name}を購入！`); 
+            updateStatus(); 
+        } else { showAlert("ゴールドが足りません！"); }
+    }
+}
+
+document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 </script>
 </body>
 </html>
