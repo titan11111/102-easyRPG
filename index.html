@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>魔の山（優しいRPG）</title>
     <style>
         /* 全体設定 */
@@ -14,14 +14,15 @@
             padding: 0;
             display: flex;
             flex-direction: column;
+            /* iOS Safariのツールバーを考慮した高さ設定 */
             height: 100vh;
-            /* iOSでのバウンススクロールやズームを防止 */
+            height: 100svh;
             overflow: hidden;
             position: fixed;
             width: 100%;
         }
 
-        /* ゲーム画面（上部70-75%） */
+        /* ゲーム画面（上部） */
         #game-container { 
             flex: 1;
             width: 100%;
@@ -30,12 +31,23 @@
             align-items: center;
             position: relative;
             overflow: hidden;
+            padding-top: env(safe-area-inset-top);
         }
 
-        .screen { display: none; width: 100%; max-width: 620px; text-align: center; padding: 10px; box-sizing: border-box; }
-        .active { display: block; }
+        .screen { 
+            display: none; 
+            width: 100%; 
+            max-width: 620px; 
+            text-align: center; 
+            padding: 10px; 
+            box-sizing: border-box; 
+        }
 
-        /* FF風ウィンドウ */
+        .active { 
+            display: block; 
+        }
+
+        /* ウィンドウデザイン */
         .ff-window {
             background: linear-gradient(180deg, #00008b 0%, #000044 100%);
             border: 3px solid #eee;
@@ -47,14 +59,19 @@
 
         /* カスタムダイアログ */
         #custom-dialog-overlay {
-            position: fixed; top: 0; left: 0; 
-            width: 100%; height: 100%;
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
             background: rgba(0,0,0,0.7); 
             display: none; 
             justify-content: center; 
             align-items: center; 
-            z-index: 1000;
+            z-index: 1000; /* 重なり順 */
+            pointer-events: none; /* 下にあるボタンを触れるようにする */
         }
+
         .dialog-content {
             width: 85%; 
             max-width: 420px;
@@ -63,39 +80,111 @@
             border: 4px double #eee;
             padding: 20px;
             border-radius: 8px;
+            pointer-events: auto; /* ダイアログ自体はイベントを受け取る */
         }
 
         /* マップ */
         #map-grid {
-            display: grid; grid-template-columns: repeat(10, 8vw); gap: 1px;
+            display: grid; 
+            grid-template-columns: repeat(10, 8vw); 
+            gap: 1px;
             max-width: 320px;
-            justify-content: center; margin: 10px auto;
-            background-color: #222; border: 2px solid #555;
+            justify-content: center; 
+            margin: 10px auto;
+            background-color: #222; 
+            border: 2px solid #555;
         }
+
         @media (min-width: 400px) {
-            #map-grid { grid-template-columns: repeat(10, 32px); }
+            #map-grid { 
+                grid-template-columns: repeat(10, 32px); 
+            }
         }
-        .cell { width: 100%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; font-size: 18px; }
+
+        .cell { 
+            width: 100%; 
+            aspect-ratio: 1/1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            font-size: 18px; 
+        }
+
         .cell.wall { background-color: #333; }
         .cell.plain { background-color: #2e8b57; }
         .cell.forest { background-color: #004d00; }
         .cell.lava { background-color: #8b0000; }
         .cell.mountain { background-color: #4b3621; }
-        .cell.hero { background-color: #ffd700; border-radius: 50%; color: #000; z-index: 5; }
+        .cell.hero { 
+            background-color: #ffd700; 
+            border-radius: 50%; 
+            color: #000; 
+            z-index: 5; 
+        }
 
         /* 戦闘画面 */
-        #battle-screen { position: relative; width: 100%; height: 100%; background-color: #000; }
-        .enemy-area { height: 40%; display: flex; justify-content: center; align-items: center; flex-direction: column; }
-        .monster-sprite { font-size: 80px; text-shadow: 0 0 15px rgba(255,0,0,0.5); }
-        .battle-ui { display: flex; height: 120px; gap: 5px; padding: 5px; }
-        .command-box { width: 40%; text-align: left; overflow-y: auto; }
-        .command-box li { padding: 8px 5px; cursor: pointer; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.1); list-style: none; }
-        .status-box { width: 60%; text-align: left; font-size: 14px; overflow-y: auto; }
-        #battle-log { width: 95%; height: 50px; margin: 5px auto; background: rgba(0,0,0,0.8); border: 1px solid #fff; padding: 5px; font-size: 14px; overflow: hidden; }
+        #battle-screen { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+            background-color: #000; 
+        }
 
-        /* --- コントロールパネル（下部） --- */
+        .enemy-area { 
+            height: 40%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            flex-direction: column; 
+        }
+
+        .monster-sprite { 
+            font-size: 80px; 
+            text-shadow: 0 0 15px rgba(255,0,0,0.5); 
+        }
+
+        .battle-ui { 
+            display: flex; 
+            height: 120px; 
+            gap: 5px; 
+            padding: 5px; 
+        }
+
+        .command-box { 
+            width: 40%; 
+            text-align: left; 
+            overflow-y: auto; 
+        }
+
+        .command-box li { 
+            padding: 8px 5px; 
+            font-size: 14px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            list-style: none; 
+        }
+
+        .status-box { 
+            width: 60%; 
+            text-align: left; 
+            font-size: 14px; 
+            overflow-y: auto; 
+        }
+
+        #battle-log { 
+            width: 95%; 
+            height: 50px; 
+            margin: 5px auto; 
+            background: rgba(0,0,0,0.8); 
+            border: 1px solid #fff; 
+            padding: 5px; 
+            font-size: 14px; 
+            overflow: hidden; 
+        }
+
+        /* コントロールパネル */
         #control-panel {
-            height: 200px; /* 固定高めに設定 */
+            flex-shrink: 0; 
+            height: 220px; 
             width: 100%;
             background-color: #ccc;
             display: flex;
@@ -103,12 +192,12 @@
             align-items: center;
             border-top: 4px solid #999;
             user-select: none;
-            /* ダブルタップズーム禁止 */
             touch-action: manipulation;
-            padding-bottom: env(safe-area-inset-bottom); /* iOSの下部バー対策 */
+            padding-bottom: env(safe-area-inset-bottom);
+            position: relative;
+            z-index: 2000; /* ダイアログより上に配置してボタンを有効化 */
         }
 
-        /* 十字キー */
         .d-pad {
             display: grid;
             grid-template-areas: 
@@ -117,28 +206,61 @@
                 ". down .";
             gap: 2px;
         }
-        .pad-btn {
-            width: 55px; height: 55px;
-            background: #444; border: none; border-radius: 8px;
-            color: white; font-size: 24px;
-            box-shadow: 0 4px #000;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .pad-btn:active { transform: translateY(2px); box-shadow: 0 2px #000; background: #222; }
-        .up { grid-area: up; } .down { grid-area: down; } .left { grid-area: left; } .right { grid-area: right; }
 
-        /* A/Bボタン */
-        .action-group { display: flex; gap: 15px; transform: rotate(-5deg); }
-        .circle-btn {
-            width: 70px; height: 70px;
-            background: #a00; border: 2px solid #500; border-radius: 50%;
-            color: white; font-size: 24px; font-weight: bold;
+        .pad-btn {
+            width: 55px; 
+            height: 55px;
+            background: #444; 
+            border: none; 
+            border-radius: 8px;
+            color: white; 
+            font-size: 24px;
             box-shadow: 0 4px #000;
             -webkit-tap-highlight-color: transparent;
         }
-        .circle-btn:active { transform: translateY(2px); box-shadow: 0 2px #000; background: #700; }
-        .btn-a { margin-top: -10px; } /* Aボタンを少し上げる */
-        .btn-b { margin-top: 20px; background: #444; border-color: #222; } /* Bボタン */
+
+        .pad-btn:active { 
+            transform: translateY(2px); 
+            box-shadow: 0 2px #000; 
+            background: #222; 
+        }
+
+        .up { grid-area: up; } 
+        .down { grid-area: down; } 
+        .left { grid-area: left; } 
+        .right { grid-area: right; }
+
+        .action-group { 
+            display: flex; 
+            gap: 15px; 
+            transform: rotate(-5deg); 
+        }
+
+        .circle-btn {
+            width: 70px; 
+            height: 70px;
+            background: #a00; 
+            border: 2px solid #500; 
+            border-radius: 50%;
+            color: white; 
+            font-size: 24px; 
+            font-weight: bold;
+            box-shadow: 0 4px #000;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .circle-btn:active { 
+            transform: translateY(2px); 
+            box-shadow: 0 2px #000; 
+            background: #700; 
+        }
+
+        .btn-a { margin-top: -10px; }
+        .btn-b { 
+            margin-top: 20px; 
+            background: #444; 
+            border-color: #222; 
+        }
 
     </style>
 </head>
@@ -154,14 +276,16 @@
     </div>
 
     <div id="main-screen" class="screen">
-        <div class="ff-window" style="margin-bottom:5px;"><span id="area-title">場所</span></div>
+        <div class="ff-window" style="margin-bottom:5px;">
+            <span id="area-title">場所</span>
+        </div>
         <div id="map-grid"></div>
         <div class="ff-window" style="width: 100%; text-align: left;">
             <div id="st-hp">HP: 100/100</div>
             <div id="st-party">一行: 勇者</div>
         </div>
         <div id="town-actions" style="display:none; margin-top: 10px;">
-            <div class="ff-window">宿屋があります (Aボタン)</div>
+            <div class="ff-window">宿屋があります (Aボタンで休憩)</div>
         </div>
     </div>
 
@@ -174,8 +298,7 @@
         <div class="battle-ui">
             <div class="ff-window command-box">
                 <ul id="command-list" style="margin:0; padding:0;">
-                    <li id="cmd-attack">▶ たたかう</li>
-                    <li id="cmd-magic" style="color:#aaa;">▶ まほう</li>
+                    <li id="cmd-attack">▶ たたかう (A)</li>
                 </ul>
             </div>
             <div class="ff-window status-box" id="party-status-area"></div>
@@ -186,14 +309,15 @@
         <div class="ff-window">
             <h1>HAPPY ENDING</h1>
             <p>仲間と共に世界を救った！</p>
-            <p>ここまでプレイしてくれてありがとう！</p>
+            <p>平和な日々が戻ってきた...</p>
+            <p>【Aボタンでタイトルへ】</p>
         </div>
     </div>
 
     <div id="custom-dialog-overlay">
         <div class="ff-window dialog-content">
             <div id="dialog-message" style="margin-bottom: 20px; line-height: 1.5;"></div>
-            <div style="font-size: 12px; color: #ccc; margin-bottom: 5px;"></div>
+            <div style="font-size: 12px; color: #ccc;">[ Aボタンで閉じる ]</div>
         </div>
     </div>
 </div>
@@ -213,54 +337,180 @@
 </div>
 
 <script>
-/* 既存のデータ構造を維持 */
-const hero = { name: "勇者", x: 1, y: 1, hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 15, mgc: 25, lv: 1, exp: 0, gold: 0, currentArea: "green_field" };
-const shopItems = [{ name: "銅の剣", price: 50, atk: 5 },{ name: "銀の剣", price: 150, atk: 15 },{ name: "黄金の剣", price: 500, atk: 50 }];
+/* --- ゲームデータ --- */
+const hero = { 
+    name: "勇者", 
+    x: 1, 
+    y: 1, 
+    hp: 100, 
+    maxHp: 100, 
+    mp: 20, 
+    maxMp: 20, 
+    atk: 15, 
+    mgc: 25, 
+    lv: 1, 
+    exp: 0, 
+    gold: 0, 
+    currentArea: "green_field" 
+};
+
+const shopItems = [
+    { name: "銅の剣", price: 50, atk: 5 },
+    { name: "銀の剣", price: 150, atk: 15 },
+    { name: "黄金の剣", price: 500, atk: 50 }
+];
+
 const allyData = {
     5: { id: "dog", name: "犬", hp: 60, maxHp: 60, atk: 12, img: "🐩", msg: "ワン！一緒に戦います！" },
     6: { id: "bird", name: "きじ", hp: 40, maxHp: 40, atk: 20, img: "🦆", msg: "ケンケン！空から助けます！" },
     7: { id: "monkey", name: "猿", hp: 80, maxHp: 80, atk: 10, img: "🐒", msg: "ウキッ！ボクも行くよ！" }
 };
+
 let party = [hero];
+
 const monsterTable = {
-    "green_field": [{ name: "ミチ生命体", hp: 30, atk: 8, exp: 40, gold: 20, img: "👽" }, { name: "大蛇", hp: 45, atk: 12, exp: 50, gold: 30, img: "🐍" }],
-    "dark_forest": [{ name: "オオオトコ", hp: 80, atk: 20, exp: 120, gold: 60, img: "🧌" }, { name: "静電気", hp: 60, atk: 25, exp: 100, gold: 80, img: "🧞" }],
-    "lava_cave": [{ name: "ドクモリ", hp: 150, atk: 35, exp: 250, gold: 120, img: "🦇" }, { name: "ヒトクイジャック", hp: 180, atk: 30, exp: 300, gold: 150, img: "🎃" }],
-    "demon_castle": [{ name: "水神", hp: 400, atk: 55, exp: 600, gold: 300, img: "🐉" }, { name: "ヴィラン", hp: 500, atk: 60, exp: 800, gold: 500, img: "🦹" }]
-};
-const worldMaps = {
-    "green_field": { name: "始まりの平原", data: [[1,1,1,1,1,1,1,1,1,1],[1,3,10,10,10,10,10,10,10,0],[1,10,10,10,5,10,10,10,10,1],[1,2,1,1,10,1,1,1,10,1],[1,8,10,10,10,10,10,10,2,1],[1,1,1,10,10,10,10,1,1,1],[1,10,10,2,1,1,10,10,10,1],[1,10,1,1,1,10,10,1,10,1],[1,10,10,10,10,10,10,10,10,1],[1,1,1,1,1,1,1,1,1,1]], exits: { right: "dark_forest" } },
-    "dark_forest": { name: "迷いの森", data: [[1,1,1,1,1,1,1,1,1,1],[0,11,2,11,11,6,11,11,2,1],[1,11,1,1,11,1,11,1,11,1],[1,11,1,11,11,2,11,1,11,1],[1,2,1,11,7,1,11,1,11,1],[1,11,11,11,11,11,11,11,11,0],[1,1,1,1,1,1,11,1,1,1],[1,11,11,11,2,11,11,1,11,1],[1,11,1,1,1,1,1,1,11,1],[1,1,1,1,1,1,1,1,1,1]], exits: { left: "green_field", right: "lava_cave" } },
-    "lava_cave": { name: "火の洞窟", data: [[1,1,1,1,1,1,1,1,1,1],[0,12,12,12,12,12,12,2,12,1],[1,1,1,1,12,1,1,1,12,1],[1,2,12,12,12,1,8,12,12,1],[1,12,1,1,1,1,12,1,1,1],[1,12,12,12,12,2,12,12,12,0],[1,1,1,1,1,1,1,1,12,1],[1,2,12,12,12,12,12,2,12,1],[1,12,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1]], exits: { left: "dark_forest", right: "demon_castle" } },
-    "demon_castle": { name: "水の山", data: [[1,1,1,1,4,1,1,1,1,1],[1,13,13,13,13,13,13,13,13,1],[1,13,1,1,1,1,1,1,13,1],[1,2,1,13,13,13,13,1,2,1],[1,13,13,13,1,1,13,13,13,1],[0,13,1,2,1,1,2,1,13,1],[1,13,1,13,13,13,13,1,13,1],[1,13,13,13,1,1,13,13,13,1],[1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1]], exits: { left: "lava_cave" } }
+    "green_field": [
+        { name: "ミチ生命体", hp: 30, atk: 8, exp: 40, gold: 20, img: "👽" }, 
+        { name: "大蛇", hp: 45, atk: 12, exp: 50, gold: 30, img: "🐍" }
+    ],
+    "dark_forest": [
+        { name: "オオオトコ", hp: 80, atk: 20, exp: 120, gold: 60, img: "🧌" }, 
+        { name: "静電気", hp: 60, atk: 25, exp: 100, gold: 80, img: "🧞" }
+    ],
+    "lava_cave": [
+        { name: "ドクモリ", hp: 150, atk: 35, exp: 250, gold: 120, img: "🦇" }, 
+        { name: "ヒトクイジャック", hp: 180, atk: 30, exp: 300, gold: 150, img: "🎃" }
+    ],
+    "demon_castle": [
+        { name: "水神", hp: 400, atk: 55, exp: 600, gold: 300, img: "🐉" }, 
+        { name: "ヴィラン", hp: 500, atk: 60, exp: 800, gold: 500, img: "🦹" }
+    ]
 };
 
+const worldMaps = {
+    "green_field": { 
+        name: "始まりの平原", 
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,3,10,10,10,10,10,10,10,0],
+            [1,10,10,10,5,10,10,10,10,1],
+            [1,2,1,1,10,1,1,1,10,1],
+            [1,8,10,10,10,10,10,10,2,1],
+            [1,1,1,10,10,10,10,1,1,1],
+            [1,10,10,2,1,1,10,10,10,1],
+            [1,10,1,1,1,10,10,1,10,1],
+            [1,10,10,10,10,10,10,10,10,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ], 
+        exits: { right: "dark_forest" } 
+    },
+    "dark_forest": { 
+        name: "迷いの森", 
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [0,11,2,11,11,6,11,11,2,1],
+            [1,11,1,1,11,1,11,1,11,1],
+            [1,11,1,11,11,2,11,1,11,1],
+            [1,2,1,11,7,1,11,1,11,1],
+            [1,11,11,11,11,11,11,11,11,0],
+            [1,1,1,1,1,1,11,1,1,1],
+            [1,11,11,11,2,11,11,1,11,1],
+            [1,11,1,1,1,1,1,1,11,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ], 
+        exits: { left: "green_field", right: "lava_cave" } 
+    },
+    "lava_cave": { 
+        name: "火の洞窟", 
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [0,12,12,12,12,12,12,2,12,1],
+            [1,1,1,1,12,1,1,1,12,1],
+            [1,2,12,12,12,1,8,12,12,1],
+            [1,12,1,1,1,1,12,1,1,1],
+            [1,12,12,12,12,2,12,12,12,0],
+            [1,1,1,1,1,1,1,1,12,1],
+            [1,2,12,12,12,12,12,2,12,1],
+            [1,12,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ], 
+        exits: { left: "dark_forest", right: "demon_castle" } 
+    },
+    "demon_castle": { 
+        name: "水の山", 
+        data: [
+            [1,1,1,1,4,1,1,1,1,1],
+            [1,13,13,13,13,13,13,13,13,1],
+            [1,13,1,1,1,1,1,1,13,1],
+            [1,2,1,13,13,13,13,1,2,1],
+            [1,13,13,13,1,1,13,13,13,1],
+            [0,13,1,2,1,1,2,1,13,1],
+            [1,13,1,13,13,13,13,1,13,1],
+            [1,13,13,13,1,1,13,13,13,1],
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,1,1,1,1,1,1,1,1,1]
+        ], 
+        exits: { left: "lava_cave" } 
+    }
+};
+
+/* --- 状態管理 --- */
 let currentEnemy = null;
 let canAttack = true;
 let isBattle = false;
+let isBattleEnding = false;
 
-/* --- コントローラー用関数 (pointerdownでレスポンス改善) --- */
+/* --- コントローラー処理 --- */
 function handleMove(dx, dy) {
-    if (isBattle) return;
+    if (isBattle) {
+        return;
+    }
     moveHero(dx, dy);
 }
 
 function handleA() {
-    if (document.getElementById('start-screen').classList.contains('active')) {
-        startGame();
-    } else if (document.getElementById('custom-dialog-overlay').style.display === 'flex') {
+    const startScreen = document.getElementById('start-screen');
+    const dialogOverlay = document.getElementById('custom-dialog-overlay');
+    const townActions = document.getElementById('town-actions');
+    const endingScreen = document.getElementById('ending-screen');
+
+    // 1. ダイアログが表示されている場合は閉じる
+    if (dialogOverlay.style.display === 'flex') {
         closeCustomDialog();
-    } else if (isBattle && canAttack) {
-        heroTurn('attack');
-    } else if (document.getElementById('town-actions').style.display === 'block') {
+        return;
+    }
+
+    // 2. スタート画面
+    if (startScreen.classList.contains('active')) {
+        startGame();
+        return;
+    }
+
+    // 3. エンディング画面
+    if (endingScreen.classList.contains('active')) {
+        location.reload();
+        return;
+    }
+
+    // 4. 戦闘中
+    if (isBattle) {
+        if (isBattleEnding) {
+            confirmBattleResult();
+        } else if (canAttack) {
+            heroTurn('attack');
+        }
+        return;
+    }
+
+    // 5. 街のアクション
+    if (townActions.style.display === 'block') {
         rest();
+        return;
     }
 }
 
 function handleB() {
-    if (isBattle) {
-        console.log("Bボタン: キャンセル/逃げる（未実装）");
-    }
+    console.log("Bボタンが押されました");
 }
 
 /* --- ゲームロジック --- */
@@ -269,21 +519,28 @@ function drawMap() {
     document.getElementById('area-title').innerText = mapInfo.name;
     const grid = document.getElementById('map-grid');
     grid.innerHTML = '';
+
     mapInfo.data.forEach((row, y) => {
         row.forEach((type, x) => {
             const cell = document.createElement('div');
             cell.className = 'cell';
+
             if (type === 1) cell.classList.add('wall');
             if (type === 10) cell.classList.add('plain');
             if (type === 11) cell.classList.add('forest');
             if (type === 12) cell.classList.add('lava');
             if (type === 13) cell.classList.add('mountain');
+
             if (x === hero.x && y === hero.y) {
-                cell.innerText = '🚶'; cell.classList.add('hero');
+                cell.innerText = '🚶';
+                cell.classList.add('hero');
             } else if (type >= 5 && type <= 7) {
                 cell.innerText = allyData[type].img;
             } else {
-                const icons = { 2: '👾', 3: '🏠', 4: '👹', 8: '🏬', 11: '🌲', 12: '🔥', 13: '⛰️' }; 
+                const icons = { 
+                    2: '👾', 3: '🏠', 4: '👹', 8: '🏬', 
+                    11: '🌲', 12: '🔥', 13: '⛰️' 
+                }; 
                 cell.innerText = icons[type] || '';
             }
             grid.appendChild(cell);
@@ -292,22 +549,54 @@ function drawMap() {
 }
 
 function moveHero(dx, dy) {
-    let nx = hero.x + dx, ny = hero.y + dy;
+    let nx = hero.x + dx;
+    let ny = hero.y + dy;
     const map = worldMaps[hero.currentArea];
-    if (nx < 0 && map.exits.left) { hero.currentArea = map.exits.left; hero.x = 9; drawMap(); updateStatus(); return; }
-    if (nx > 9 && map.exits.right) { hero.currentArea = map.exits.right; hero.x = 0; drawMap(); updateStatus(); return; }
+
+    if (nx < 0 && map.exits.left) { 
+        hero.currentArea = map.exits.left; 
+        hero.x = 9; 
+        drawMap(); 
+        updateStatus(); 
+        return; 
+    }
+    if (nx > 9 && map.exits.right) { 
+        hero.currentArea = map.exits.right; 
+        hero.x = 0; 
+        drawMap(); 
+        updateStatus(); 
+        return; 
+    }
+
     if (nx >= 0 && nx <= 9 && ny >= 0 && ny <= 9) {
         const tile = map.data[ny][nx];
-        if (tile === 1) return;
-        hero.x = nx; hero.y = ny;
-        if (tile >= 5 && tile <= 7) addAlly(tile);
-        if (tile === 2) startBattle();
-        if (tile === 3) document.getElementById('town-actions').style.display = 'block';
-        else document.getElementById('town-actions').style.display = 'none';
-        if (tile === 8) showShop(); 
-        if (tile === 4) startBossBattle();
+        if (tile === 1) {
+            return;
+        }
+
+        hero.x = nx; 
+        hero.y = ny;
+
+        if (tile >= 5 && tile <= 7) {
+            addAlly(tile);
+        }
+        if (tile === 2) {
+            startBattle();
+        }
+        if (tile === 3) {
+            document.getElementById('town-actions').style.display = 'block';
+        } else {
+            document.getElementById('town-actions').style.display = 'none';
+        }
+        if (tile === 8) {
+            showShop(); 
+        }
+        if (tile === 4) {
+            startBossBattle();
+        }
     }
-    drawMap(); updateStatus();
+    drawMap(); 
+    updateStatus();
 }
 
 function addAlly(type) {
@@ -319,8 +608,10 @@ function addAlly(type) {
     }
 }
 
+/* --- 戦闘システム --- */
 function startBattle() {
     isBattle = true;
+    isBattleEnding = false;
     const areaMonsters = monsterTable[hero.currentArea];
     const randomIndex = Math.floor(Math.random() * areaMonsters.length);
     currentEnemy = { ...areaMonsters[randomIndex] };
@@ -329,7 +620,8 @@ function startBattle() {
 
 function startBossBattle() {
     isBattle = true;
-    currentEnemy = { name: "魔王", hp: 1000, atk: 60, exp: 0, img: "👹" };
+    isBattleEnding = false;
+    currentEnemy = { name: "魔王", hp: 1000, atk: 60, exp: 0, gold: 0, img: "👹" };
     initBattle();
 }
 
@@ -353,22 +645,38 @@ function updateBattleStatus() {
 function heroTurn(action) {
     if (!canAttack) return;
     canAttack = false;
-    if (action === 'attack') { performAttack(hero); } 
-    if (currentEnemy.hp > 0) setTimeout(partyTurn, 800);
-    else setTimeout(winBattle, 800);
+    performAttack(hero);
+
+    if (currentEnemy.hp > 0) {
+        setTimeout(partyTurn, 800);
+    } else {
+        setTimeout(winBattle, 800);
+    }
 }
 
 function partyTurn() {
     let index = 1;
     function nextAlly() {
-        if (currentEnemy.hp <= 0) { winBattle(); return; }
+        if (currentEnemy.hp <= 0) { 
+            winBattle(); 
+            return; 
+        }
         if (index < party.length) {
             const member = party[index];
-            if (member.hp > 0) { performAttack(member); index++; setTimeout(nextAlly, 800); } 
-            else { index++; nextAlly(); }
+            if (member.hp > 0) { 
+                performAttack(member); 
+                index++; 
+                setTimeout(nextAlly, 800); 
+            } else { 
+                index++; 
+                nextAlly(); 
+            }
         } else {
-            if (currentEnemy.hp > 0) setTimeout(enemyTurn, 800);
-            else winBattle();
+            if (currentEnemy.hp > 0) {
+                setTimeout(enemyTurn, 800);
+            } else {
+                winBattle();
+            }
         }
     }
     nextAlly();
@@ -386,45 +694,109 @@ function enemyTurn() {
     const target = aliveMembers[Math.floor(Math.random() * aliveMembers.length)];
     let dmg = Math.max(1, currentEnemy.atk - 5);
     target.hp -= dmg;
+
     document.getElementById('battle-log').innerText = `${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`;
     updateBattleStatus();
-    if (hero.hp <= 0) { showAlert("勇者が力尽きた..."); setTimeout(() => location.reload(), 2000); }
-    else { setTimeout(() => { canAttack = true; document.getElementById('battle-log').innerText = "コマンドを選んでください (Aボタン)"; }, 800); }
+
+    if (hero.hp <= 0) { 
+        showAlert("勇者が力尽きた..."); 
+        setTimeout(() => location.reload(), 2000); 
+    } else { 
+        setTimeout(() => { 
+            canAttack = true; 
+            document.getElementById('battle-log').innerText = "コマンドを選んでください (Aボタン)"; 
+        }, 800); 
+    }
 }
 
 function winBattle() {
+    isBattleEnding = true;
+    document.getElementById('battle-log').innerText = `${currentEnemy.name}を倒した！ (Aボタンで進む)`;
+}
+
+function confirmBattleResult() {
     isBattle = false;
-    if (currentEnemy.name === "魔王") showScreen('ending-screen');
-    else {
-        document.getElementById('battle-log').innerText = `${currentEnemy.name}を倒した！ ${currentEnemy.gold}G獲得！`;
+    isBattleEnding = false;
+    if (currentEnemy.name === "魔王") {
+        showScreen('ending-screen');
+    } else {
         hero.exp += currentEnemy.exp;
-        hero.gold += currentEnemy.gold; 
+        hero.gold += (currentEnemy.gold || 0); 
         worldMaps[hero.currentArea].data[hero.y][hero.x] = 0;
+        
+        showScreen('main-screen'); 
+        drawMap(); 
+        updateStatus();
         checkLevelUp();
-        setTimeout(() => { showScreen('main-screen'); drawMap(); updateStatus(); }, 1200);
     }
 }
 
-function checkLevelUp() { if (hero.exp >= hero.lv * 100) { hero.lv++; hero.atk += 10; hero.maxHp += 20; hero.hp = hero.maxHp; showAlert(`レベルアップ！ LV ${hero.lv}`); } }
-function rest() { hero.hp = hero.maxHp; hero.mp = hero.maxMp; updateStatus(); showAlert("宿屋で休んで全快した！"); }
-function updateStatus() { document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G`; document.getElementById('st-party').innerText = "一行: " + party.map(m => m.name).join(", "); }
-function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-function startGame() { showScreen('main-screen'); drawMap(); updateStatus(); }
+/* --- システム関数 --- */
+function checkLevelUp() { 
+    if (hero.exp >= hero.lv * 100) { 
+        hero.lv++; 
+        hero.atk += 10; 
+        hero.maxHp += 20; 
+        hero.hp = hero.maxHp; 
+        showAlert(`レベルアップ！ LV ${hero.lv}\n攻撃力とHPが上がった！`); 
+    } 
+}
+
+function rest() { 
+    hero.hp = hero.maxHp; 
+    hero.mp = hero.maxMp; 
+    updateStatus(); 
+    showAlert("宿屋で休んで全快した！"); 
+}
+
+function updateStatus() { 
+    document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G`; 
+    document.getElementById('st-party').innerText = "一行: " + party.map(m => m.name).join(", "); 
+}
+
+function showScreen(id) { 
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
+    document.getElementById(id).classList.add('active'); 
+}
+
+function startGame() { 
+    showScreen('main-screen'); 
+    drawMap(); 
+    updateStatus(); 
+}
+
 function showShop() {
     let msg = "武器屋 (番号入力):\n";
-    shopItems.forEach((item, index) => { msg += `${index}: ${item.name} (${item.price}G)\n`; });
+    shopItems.forEach((item, index) => { 
+        msg += `${index}: ${item.name} (${item.price}G)\n`; 
+    });
     const choice = prompt(msg);
     if (choice !== null && shopItems[choice]) {
         const item = shopItems[choice];
-        if (hero.gold >= item.price) { hero.gold -= item.price; hero.atk += item.atk; showAlert(`${item.name}を購入！`); updateStatus(); }
-        else { showAlert("ゴールドが足りません！"); }
+        if (hero.gold >= item.price) { 
+            hero.gold -= item.price; 
+            hero.atk += item.atk; 
+            showAlert(`${item.name}を購入！`); 
+            updateStatus(); 
+        } else { 
+            showAlert("ゴールドが足りません！"); 
+        }
     }
 }
-function showAlert(text) { document.getElementById('dialog-message').innerText = text; document.getElementById('custom-dialog-overlay').style.display = 'flex'; }
-function closeCustomDialog() { document.getElementById('custom-dialog-overlay').style.display = 'none'; }
 
-// iOSでのスクロール禁止
-document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+function showAlert(text) { 
+    document.getElementById('dialog-message').innerText = text; 
+    document.getElementById('custom-dialog-overlay').style.display = 'flex'; 
+}
+
+function closeCustomDialog() { 
+    document.getElementById('custom-dialog-overlay').style.display = 'none'; 
+}
+
+// iOS Safariでの画面スクロールを完全に禁止
+document.addEventListener('touchmove', function(e) { 
+    e.preventDefault(); 
+}, { passive: false });
 </script>
 </body>
 </html>
