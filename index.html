@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>魔の山（優しいRPG）</title>
+    <title>魔の山（優しいRPG - 拡張版）</title>
     <style>
         /* 全体設定 */
         body { 
@@ -14,7 +14,6 @@
             padding: 0;
             display: flex;
             flex-direction: column;
-            /* iOS Safariのツールバーを考慮した高さ設定 */
             height: 100vh;
             height: 100svh;
             overflow: hidden;
@@ -57,19 +56,21 @@
             box-sizing: border-box;
         }
 
-        /* カスタムダイアログ */
+        /* カスタムダイアログの修正 */
         #custom-dialog-overlay {
             position: fixed; 
             top: 0; 
             left: 0; 
             width: 100%; 
-            height: 100%;
+            /* コントロールパネルを覆わないように高さを調整 */
+            height: calc(100% - 220px); 
             background: rgba(0,0,0,0.7); 
             display: none; 
             justify-content: center; 
             align-items: center; 
-            z-index: 1000; /* 重なり順 */
-            pointer-events: none; /* 下にあるボタンを触れるようにする */
+            z-index: 1000; 
+            /* 下にある要素（ボタン以外）を触れないようにする */
+            pointer-events: auto; 
         }
 
         .dialog-content {
@@ -80,7 +81,6 @@
             border: 4px double #eee;
             padding: 20px;
             border-radius: 8px;
-            pointer-events: auto; /* ダイアログ自体はイベントを受け取る */
         }
 
         /* マップ */
@@ -181,7 +181,7 @@
             overflow: hidden; 
         }
 
-        /* コントロールパネル */
+        /* コントロールパネルの修正 */
         #control-panel {
             flex-shrink: 0; 
             height: 220px; 
@@ -195,7 +195,8 @@
             touch-action: manipulation;
             padding-bottom: env(safe-area-inset-bottom);
             position: relative;
-            z-index: 2000; /* ダイアログより上に配置してボタンを有効化 */
+            /* ダイアログよりも手前に配置して常に触れるようにする */
+            z-index: 2000; 
         }
 
         .d-pad {
@@ -351,7 +352,8 @@ const hero = {
     lv: 1, 
     exp: 0, 
     gold: 0, 
-    currentArea: "green_field" 
+    currentArea: "green_field",
+    hasKey: false 
 };
 
 const shopItems = [
@@ -392,17 +394,37 @@ const worldMaps = {
         name: "始まりの平原", 
         data: [
             [1,1,1,1,1,1,1,1,1,1],
-            [1,3,10,10,10,10,10,10,10,0],
+            [1,0,10,10,10,10,10,10,10,0],
             [1,10,10,10,5,10,10,10,10,1],
             [1,2,1,1,10,1,1,1,10,1],
-            [1,8,10,10,10,10,10,10,2,1],
-            [1,1,1,10,10,10,10,1,1,1],
-            [1,10,10,2,1,1,10,10,10,1],
+            [1,10,10,10,10,10,10,10,14,1],
+            [1,1,1,10,3,10,10,1,1,1],
+            [1,10,10,10,1,1,10,10,10,1],
             [1,10,1,1,1,10,10,1,10,1],
             [1,10,10,10,10,10,10,10,10,1],
             [1,1,1,1,1,1,1,1,1,1]
         ], 
         exits: { right: "dark_forest" } 
+    },
+    "town_inside": {
+        name: "ポチの村",
+        data: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,17,1],
+            [1,0,8,0,0,0,0,0,0,1],
+            [1,0,0,0,15,0,0,0,0,1],
+            [1,1,1,1,0,0,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,15,0,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,0,0,1,1,1,1],
+            [1,1,1,1,0,0,1,1,1,1]
+        ],
+        exits: { bottom: "green_field" },
+        npcs: [
+            { x: 4, y: 3, img: "👳", msg: "この村の北東に『古い鍵』が隠されているらしいぞ。" },
+            { x: 7, y: 6, img: "👧", msg: "魔王の城の門には、鍵がかかっているの。" }
+        ]
     },
     "dark_forest": { 
         name: "迷いの森", 
@@ -440,7 +462,7 @@ const worldMaps = {
         name: "水の山", 
         data: [
             [1,1,1,1,4,1,1,1,1,1],
-            [1,13,13,13,13,13,13,13,13,1],
+            [1,13,13,13,16,13,13,13,13,1],
             [1,13,1,1,1,1,1,1,13,1],
             [1,2,1,13,13,13,13,1,2,1],
             [1,13,13,13,1,1,13,13,13,1],
@@ -462,9 +484,9 @@ let isBattleEnding = false;
 
 /* --- コントローラー処理 --- */
 function handleMove(dx, dy) {
-    if (isBattle) {
-        return;
-    }
+    if (isBattle) return;
+    // ダイアログが出ている間は移動を止める
+    if (document.getElementById('custom-dialog-overlay').style.display === 'flex') return;
     moveHero(dx, dy);
 }
 
@@ -480,19 +502,16 @@ function handleA() {
         return;
     }
 
-    // 2. スタート画面
     if (startScreen.classList.contains('active')) {
         startGame();
         return;
     }
 
-    // 3. エンディング画面
     if (endingScreen.classList.contains('active')) {
         location.reload();
         return;
     }
 
-    // 4. 戦闘中
     if (isBattle) {
         if (isBattleEnding) {
             confirmBattleResult();
@@ -502,7 +521,6 @@ function handleA() {
         return;
     }
 
-    // 5. 街のアクション
     if (townActions.style.display === 'block') {
         rest();
         return;
@@ -539,8 +557,16 @@ function drawMap() {
             } else {
                 const icons = { 
                     2: '👾', 3: '🏠', 4: '👹', 8: '🏬', 
-                    11: '🌲', 12: '🔥', 13: '⛰️' 
+                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '📦'
                 }; 
+                if (mapInfo.npcs) {
+                    const npc = mapInfo.npcs.find(n => n.x === x && n.y === y);
+                    if (npc) {
+                        cell.innerText = npc.img;
+                        grid.appendChild(cell);
+                        return;
+                    }
+                }
                 cell.innerText = icons[type] || '';
             }
             grid.appendChild(cell);
@@ -556,37 +582,61 @@ function moveHero(dx, dy) {
     if (nx < 0 && map.exits.left) { 
         hero.currentArea = map.exits.left; 
         hero.x = 9; 
-        drawMap(); 
-        updateStatus(); 
-        return; 
+        return afterMove(); 
     }
     if (nx > 9 && map.exits.right) { 
         hero.currentArea = map.exits.right; 
         hero.x = 0; 
-        drawMap(); 
-        updateStatus(); 
-        return; 
+        return afterMove(); 
+    }
+    if (ny > 9 && map.exits.bottom) {
+        hero.currentArea = map.exits.bottom;
+        hero.x = 4;
+        hero.y = 6;
+        return afterMove();
     }
 
     if (nx >= 0 && nx <= 9 && ny >= 0 && ny <= 9) {
         const tile = map.data[ny][nx];
-        if (tile === 1) {
-            return;
+        if (tile === 1) return; 
+
+        if (tile === 16) {
+            if (hero.hasKey) {
+                showAlert("鍵を使って扉を開けた！");
+                map.data[ny][nx] = 0; 
+            } else {
+                showAlert("鍵がかかっていて進めない。");
+                return;
+            }
         }
 
         hero.x = nx; 
         hero.y = ny;
 
+        if (tile === 3) {
+            hero.currentArea = "town_inside";
+            hero.x = 4;
+            hero.y = 8;
+        }
         if (tile >= 5 && tile <= 7) {
             addAlly(tile);
         }
         if (tile === 2) {
             startBattle();
         }
-        if (tile === 3) {
-            document.getElementById('town-actions').style.display = 'block';
-        } else {
-            document.getElementById('town-actions').style.display = 'none';
+        if (tile === 14) {
+            hero.gold += 100;
+            showAlert("宝箱を開けた！\n100ゴールド手に入れた！");
+            map.data[ny][nx] = 19;
+        }
+        if (tile === 17) {
+            hero.hasKey = true;
+            showAlert("宝箱から『古い鍵』を見つけた！");
+            map.data[ny][nx] = 19;
+        }
+        if (tile === 15) {
+            const npc = map.npcs.find(n => n.x === nx && n.y === ny);
+            if (npc) showAlert(npc.msg);
         }
         if (tile === 8) {
             showShop(); 
@@ -594,17 +644,44 @@ function moveHero(dx, dy) {
         if (tile === 4) {
             startBossBattle();
         }
+
+        if ((tile === 10 || tile === 11) && Math.random() < 0.15) {
+            startBattle();
+        }
     }
+    afterMove();
+}
+
+function afterMove() {
+    updateNPCs();
     drawMap(); 
     updateStatus();
+}
+
+function updateNPCs() {
+    const map = worldMaps[hero.currentArea];
+    if (map.npcs) {
+        map.npcs.forEach(npc => {
+            const directions = [[0,1], [0,-1], [1,0], [-1,0]];
+            const dir = directions[Math.floor(Math.random() * directions.length)];
+            const tx = npc.x + dir[0];
+            const ty = npc.y + dir[1];
+            if (tx >= 0 && tx <= 9 && ty >= 0 && ty <= 9 && map.data[ty][tx] === 0 && !(tx === hero.x && ty === hero.y)) {
+                npc.x = tx;
+                npc.y = ty;
+            }
+        });
+    }
 }
 
 function addAlly(type) {
     const ally = allyData[type];
     if (!party.find(m => m.name === ally.name)) {
         party.push({ ...ally });
-        showAlert(`${ally.name}:「${ally.msg}」\n\n${ally.name}が仲間に加わった！`);
         worldMaps[hero.currentArea].data[hero.y][hero.x] = 0; 
+        drawMap();
+        updateStatus();
+        showAlert(`${ally.name}:「${ally.msg}」\n\n${ally.name}が仲間に加わった！`);
     }
 }
 
@@ -612,7 +689,7 @@ function addAlly(type) {
 function startBattle() {
     isBattle = true;
     isBattleEnding = false;
-    const areaMonsters = monsterTable[hero.currentArea];
+    const areaMonsters = monsterTable[hero.currentArea] || monsterTable["green_field"];
     const randomIndex = Math.floor(Math.random() * areaMonsters.length);
     currentEnemy = { ...areaMonsters[randomIndex] };
     initBattle();
@@ -638,7 +715,8 @@ function updateBattleStatus() {
     const area = document.getElementById('party-status-area');
     area.innerHTML = '<div style="border-bottom: 1px solid #fff; margin-bottom: 5px;">NAME HP</div>';
     party.forEach(m => {
-        area.innerHTML += `<div class="status-row" style="display:flex; justify-content:space-between;"><span>${m.name}</span><span>${m.hp}/${m.maxHp}</span></div>`;
+        const displayHp = m.hp > 0 ? m.hp : 0;
+        area.innerHTML += `<div class="status-row" style="display:flex; justify-content:space-between;"><span>${m.name}</span><span>${displayHp}/${m.maxHp}</span></div>`;
     });
 }
 
@@ -691,6 +769,8 @@ function performAttack(attacker) {
 
 function enemyTurn() {
     const aliveMembers = party.filter(m => m.hp > 0);
+    if (aliveMembers.length === 0) return; 
+
     const target = aliveMembers[Math.floor(Math.random() * aliveMembers.length)];
     let dmg = Math.max(1, currentEnemy.atk - 5);
     target.hp -= dmg;
@@ -722,7 +802,10 @@ function confirmBattleResult() {
     } else {
         hero.exp += currentEnemy.exp;
         hero.gold += (currentEnemy.gold || 0); 
-        worldMaps[hero.currentArea].data[hero.y][hero.x] = 0;
+        const map = worldMaps[hero.currentArea];
+        if (map.data[hero.y][hero.x] === 2) {
+            map.data[hero.y][hero.x] = 0;
+        }
         
         showScreen('main-screen'); 
         drawMap(); 
@@ -750,7 +833,7 @@ function rest() {
 }
 
 function updateStatus() { 
-    document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G`; 
+    document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G | 鍵: ${hero.hasKey ? '持' : '無'}`; 
     document.getElementById('st-party').innerText = "一行: " + party.map(m => m.name).join(", "); 
 }
 
