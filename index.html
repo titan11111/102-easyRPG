@@ -140,13 +140,13 @@
         }
 
         .monster-sprite { 
-            font-size: 80px; 
+            font-size: 160px; 
             text-shadow: 0 0 15px rgba(255,0,0,0.5); 
         }
 
         .monster-sprite img {
-            width: 160px;
-            height: 160px;
+            width: 320px;
+            height: 320px;
             object-fit: contain;
         }
 
@@ -471,21 +471,21 @@ const worldMaps = {
         exits: { top: "green_field", right: "lonely_desert" }
     },
     "lonely_desert": {
-        name: "寂しい砂漠",
-        data: [
-            [1,1,1,1,0,0,1,1,1,1], 
-            [1,21,21,21,21,21,21,21,21,1],
-            [1,21,1,1,1,1,1,1,21,1],
-            [0,21,1,21,21,21,21,1,21,1], 
-            [1,21,1,21,25,21,21,1,21,1], // 25: かつての村の入り口 (🏚️)
-            [1,21,1,21,21,21,21,1,21,1],
-            [1,21,1,1,1,1,1,1,21,1],
-            [1,21,21,2,21,21,21,21,21,1],
-            [1,21,21,21,21,2,21,21,21,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ],
-        exits: { left: "wasteland", top: "dark_forest" }
-    },
+            name: "寂しい砂漠",
+            data: [
+                [1,1,1,1,0,0,1,1,1,1],
+                [1,21,21,21,21,21,21,21,21,1],
+                [1,21,1,1,1,1,1,1,21,1],
+                [0,21,1,21,21,21,21,21,21,1],
+                [1,21,1,21,25,21,21,21,21,1], // 25: かつての村の入り口 (🏚️)
+                [1,21,1,21,21,21,21,1,21,1],
+                [1,21,1,1,1,1,1,1,21,1],
+                [1,21,21,2,21,21,21,21,21,1],
+                [1,21,21,21,21,2,21,21,21,1],
+                [1,1,1,1,1,1,1,1,1,1]
+            ],
+            exits: { left: "wasteland", top: "dark_forest" }
+        },
     "ruined_village": {
         name: "かつての村",
         data: [
@@ -834,7 +834,7 @@ function startNiseousamaBattle() {
         atk: 70, 
         exp: 0, 
         gold: 0, 
-        img: '🤴' 
+        img: 'images/niseousama.png' // "images/"
     };
     initBattle();
 }
@@ -849,7 +849,7 @@ function startMomoBattle() {
         atk: 45, 
         exp: 1000, 
         gold: 500, 
-        img: '🍑' 
+        img: 'images/momosennin.png' // "images/"
     };
     initBattle();
 }
@@ -874,7 +874,14 @@ function startBossBattle() {
 function initBattle() {
     canAttack = true;
     document.getElementById('monster-name').innerText = currentEnemy.name;
-    document.getElementById('monster-sprite').innerHTML = currentEnemy.img;
+    
+    // 画像か絵文字かを判定
+    if (currentEnemy.img.endsWith('.jpg') || currentEnemy.img.endsWith('.png')) {
+        document.getElementById('monster-sprite').innerHTML = `<img src="${currentEnemy.img}" alt="${currentEnemy.name}">`;
+    } else {
+        document.getElementById('monster-sprite').innerHTML = currentEnemy.img;
+    }
+
     document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
     updateBattleStatus();
     showScreen('battle-screen');
