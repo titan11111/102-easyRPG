@@ -3,1039 +3,886 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>魔の山（拡張版：桃仙人の試練）</title>
+    <title>リアル棒人間を助けろ!テトリスブリッジ</title>
     <style>
-        /* 全体設定 */
-        body { 
-            background-color: #000; 
-            color: #fff; 
-            font-family: 'MS Gothic', 'Courier New', monospace; 
-            margin: 0; 
+        * {
+            margin: 0;
             padding: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100svh;
-            overflow: hidden;
-            position: fixed;
-            width: 100%;
+            box-sizing: border-box;
+            /* iOSでの長押し選択を防止 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
-
-        /* ゲーム画面（上部） */
-        #game-container { 
-            flex: 1;
-            width: 100%;
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
+            min-height: 100vh;
+            /* iPhoneのセーフエリア対応 */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             overflow: hidden;
-            padding-top: env(safe-area-inset-top);
+            /* 全体のスクロールとズームを禁止 */
+            touch-action: none;
         }
-
-        .screen { 
-            display: none; 
-            width: 100%; 
-            max-width: 620px; 
-            text-align: center; 
-            padding: 10px; 
-            box-sizing: border-box; 
-        }
-
-        .active { 
-            display: block; 
-        }
-
-        /* ウィンドウデザイン */
-        .ff-window {
-            background: linear-gradient(180deg, #00008b 0%, #000044 100%);
-            border: 3px solid #eee;
-            border-radius: 8px;
-            box-shadow: inset 0 0 5px #000;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        /* カスタムダイアログ */
-        #custom-dialog-overlay {
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: calc(100% - 220px); 
-            background: rgba(0,0,0,0.7); 
-            display: none; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 1000; 
-            pointer-events: auto; 
-        }
-
-        .dialog-content {
-            width: 85%; 
-            max-width: 420px;
-            text-align: center; 
-            background: linear-gradient(180deg, #0000bb 0%, #000044 100%);
-            border: 4px double #eee;
+        
+        #gameContainer {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             padding: 20px;
-            border-radius: 8px;
+            max-width: 800px;
+            width: 95%; /* スマホで横幅いっぱいに */
+            position: relative;
+            z-index: 10;
+        }
+        
+        #gameTitle {
+            text-align: center;
+            color: #FF6B6B;
+            font-size: clamp(18px, 5vw, 24px); /* フォントサイズをレスポンシブに */
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #F0F8FF;
+            border: 3px solid #4ECDC4;
+            border-radius: 10px;
+            max-width: 100%;
+            /* キャンバス上のタッチアクションを完全に制御 */
+            touch-action: none;
+        }
+        
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            justify-items: center;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* ボタンの配置調整 */
+        .btn-spacer { grid-column: 1; }
+        #rotateBtn { grid-column: 2; grid-row: 1; }
+        #leftBtn { grid-column: 1; grid-row: 2; }
+        #downBtn { grid-column: 2; grid-row: 2; }
+        #rightBtn { grid-column: 3; grid-row: 2; }
+        #startBtnContainer { 
+            grid-column: 1 / -1; 
+            width: 100%;
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
         }
 
-        /* マップ */
-        #map-grid {
-            display: grid; 
-            grid-template-columns: repeat(10, 8vw); 
-            gap: 1px;
-            max-width: 320px;
-            justify-content: center; 
-            margin: 10px auto;
-            background-color: #222; 
-            border: 2px solid #555;
+        button {
+            padding: 0;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #4ECDC4;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.1s;
+            box-shadow: 0 4px 0 #3aa8a0; /* 押した感触を出すための立体感 */
+            /* タップ時の遅延をなくす */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        button:active, button.active {
+            transform: translateY(4px); /* 押し込みアニメーション */
+            box-shadow: 0 0 0 #3aa8a0;
+            background: #3DA89E;
+        }
+        
+        #startBtn {
+            width: 100%;
+            max-width: 200px;
+            height: 50px;
+            font-size: 18px;
+            background: #FF6B6B;
+            box-shadow: 0 4px 0 #d64545;
+        }
+        
+        #startBtn:active {
+            background: #E64545;
+            box-shadow: 0 0 0 #d64545;
+        }
+        
+        #info {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        #score {
+            text-align: center;
+            font-size: 20px;
+            color: #FF6B6B;
+            margin-top: 5px;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums; /* 数字の幅を揃える */
         }
 
-        @media (min-width: 400px) {
-            #map-grid { 
-                grid-template-columns: repeat(10, 32px); 
+        /* ゲームオーバー/クリア時のオーバーレイ */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 15px;
+            z-index: 20;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        #overlay h2 {
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+        
+        #overlay p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        #overlayBtn {
+            background: #FF6B6B;
+            width: auto;
+            padding: 0 30px;
+            box-shadow: 0 4px 0 #d64545;
+        }
+
+        @media (min-width: 600px) {
+             /* PCやタブレット向けの調整 */
+            button {
+                width: 70px;
+                height: 70px;
             }
         }
-
-        .cell { 
-            width: 100%; 
-            aspect-ratio: 1/1; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            font-size: 18px; 
-        }
-
-        .cell.wall { background-color: #333; }
-        .cell.plain { background-color: #2e8b57; }
-        .cell.forest { background-color: #004d00; }
-        .cell.lava { background-color: #8b0000; }
-        .cell.mountain { background-color: #4b3621; }
-        .cell.wasteland { background-color: #554433; } /* 無法の荒地の色 */
-        .cell.desert { background-color: #c2b280; } /* 砂漠の色 */
-        .cell.ruins { background-color: #444; } /* かつての村の床 */
-        .cell.hero { 
-            background-color: #ffd700; 
-            border-radius: 50%; 
-            color: #000; 
-            z-index: 5; 
-        }
-
-        /* 戦闘画面 */
-        #battle-screen { 
-            position: relative; 
-            width: 100%; 
-            height: 100%; 
-            background-color: #000; 
-        }
-
-        .enemy-area { 
-            height: 40%; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            flex-direction: column; 
-        }
-
-        .monster-sprite { 
-            font-size: 160px; 
-            text-shadow: 0 0 15px rgba(255,0,0,0.5); 
-        }
-
-        .monster-sprite img {
-            width: 320px;
-            height: 320px;
-            object-fit: contain;
-        }
-
-        .battle-ui { 
-            display: flex; 
-            height: 120px; 
-            gap: 5px; 
-            padding: 5px; 
-        }
-
-        .command-box { 
-            width: 40%; 
-            text-align: left; 
-            overflow-y: auto; 
-        }
-
-        .command-box li { 
-            padding: 8px 5px; 
-            font-size: 14px; 
-            border-bottom: 1px solid rgba(255,255,255,0.1); 
-            list-style: none; 
-        }
-
-        .status-box { 
-            width: 60%; 
-            text-align: left; 
-            font-size: 14px; 
-            overflow-y: auto; 
-        }
-
-        #battle-log { 
-            width: 95%; 
-            height: 50px; 
-            margin: 5px auto; 
-            background: rgba(0,0,0,0.8); 
-            border: 1px solid #fff; 
-            padding: 5px; 
-            font-size: 14px; 
-            overflow: hidden; 
-        }
-
-        /* コントロールパネル */
-        #control-panel {
-            flex-shrink: 0; 
-            height: 220px; 
-            width: 100%;
-            background-color: #ccc;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 4px solid #999;
-            user-select: none;
-            touch-action: manipulation;
-            padding-bottom: env(safe-area-inset-bottom);
-            position: relative;
-            z-index: 2000; 
-        }
-
-        .d-pad {
-            display: grid;
-            grid-template-areas: 
-                ". up ."
-                "left . right"
-                ". down .";
-            gap: 2px;
-        }
-
-        .pad-btn {
-            width: 55px; 
-            height: 55px;
-            background: #444; 
-            border: none; 
-            border-radius: 8px;
-            color: white; 
-            font-size: 24px;
-            box-shadow: 0 4px #000;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .pad-btn:active { 
-            transform: translateY(2px); 
-            box-shadow: 0 2px #000; 
-            background: #222; 
-        }
-
-        .up { grid-area: up; } 
-        .down { grid-area: down; } 
-        .left { grid-area: left; } 
-        .right { grid-area: right; }
-
-        .action-group { 
-            display: flex; 
-            gap: 15px; 
-            transform: rotate(-5deg); 
-        }
-
-        .circle-btn {
-            width: 70px; 
-            height: 70px;
-            background: #a00; 
-            border: 2px solid #500; 
-            border-radius: 50%;
-            color: white; 
-            font-size: 24px; 
-            font-weight: bold;
-            box-shadow: 0 4px #000;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .circle-btn:active { 
-            transform: translateY(2px); 
-            box-shadow: 0 2px #000; 
-            background: #700; 
-        }
-
-        .btn-a { margin-top: -10px; }
-        .btn-b { 
-            margin-top: 20px; 
-            background: #444; 
-            border-color: #222; 
-        }
-
     </style>
 </head>
 <body>
-
-<div id="game-container">
-    <div id="start-screen" class="screen active">
-        <div class="ff-window">
-            <h1>LEGEND OF INUSARUKIGI</h1>
-            <p>仲間を集め、魔王を討て</p>
-            <p style="color: #ff0;"></p>
-            <p>【Aボタンで開始】</p>
-        </div>
-    </div>
-
-    <div id="prologue-screen" class="screen">
-        <div class="ff-window">
-            <div style="font-size: 160px; margin-bottom: 20px;">🕴️</div>
-            <p id="prologue-text">「わしは王様じゃ。えっと、、、お主は？」</p>
-            <p>【Aボタンで名前を教える】</p>
-        </div>
-    </div>
-
-    <div id="main-screen" class="screen">
-        <div class="ff-window" style="margin-bottom:5px;">
-            <span id="area-title">場所</span>
-        </div>
-        <div id="map-grid"></div>
-        <div class="ff-window" style="width: 100%; text-align: left;">
-            <div id="st-hp">HP: 100/100</div>
-            <div id="st-party">一行: 勇者</div>
-        </div>
-        <div id="town-actions" style="display:none; margin-top: 10px;">
-            <div class="ff-window">宿屋があります</div>
-        </div>
-    </div>
-
-    <div id="battle-screen" class="screen">
-        <div id="battle-log">魔物があらわれた！</div>
-        <div class="enemy-area">
-            <div id="monster-sprite" class="monster-sprite"></div>
-            <div id="monster-name">モンスター</div>
-        </div>
-        <div class="battle-ui">
-            <div class="ff-window command-box">
-                <ul id="command-list" style="margin:0; padding:0;">
-                    <li id="cmd-attack">▶ たたかう (A)</li>
-                </ul>
+    <div id="gameContainer">
+        <h1 id="gameTitle">🏃 リアル棒人間を助けろ! 🧱</h1>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div id="score">スコア: 0</div>
+        
+        <div id="controls">
+            <div class="btn-spacer"></div>
+            <button id="rotateBtn" class="control-btn">🔄</button>
+            <div class="btn-spacer"></div>
+            
+            <button id="leftBtn" class="control-btn">⬅️</button>
+            <button id="downBtn" class="control-btn">⬇️</button>
+            <button id="rightBtn" class="control-btn">➡️</button>
+            
+            <div id="startBtnContainer">
+                <button id="startBtn">スタート</button>
             </div>
-            <div class="ff-window status-box" id="party-status-area"></div>
+        </div>
+        
+        <div id="info">
+            PC: 矢印キーで移動、上キー/スペースで回転<br>
+            スマホ: ボタンタップ
+        </div>
+
+        <div id="overlay">
+            <h2 id="overlayTitle">TITLE</h2>
+            <p id="overlayMessage">Message</p>
+            <button id="overlayBtn">もう一度</button>
         </div>
     </div>
 
-    <div id="ending-screen" class="screen">
-        <div class="ff-window">
-            <h1 id="ending-title">HAPPY ENDING</h1>
-            <p id="ending-msg">仲間と共に世界を救った！</p>
-            <p>平和な日々が戻ってきた...</p>
-            <p>【Aボタンでタイトルへ】</p>
-        </div>
-    </div>
+    <script>
+        // ==========================================
+        //  リアル・ランニング・スティックマン クラス
+        // ==========================================
+        class RunningStickman {
+            constructor(x, y, scale = 1.0, colorBody = '#34495e', colorLimbs = '#e74c3c') {
+                this.x = x;
+                this.y = y;
+                this.scale = scale;
+                this.colorBody = colorBody;
+                this.colorLimbs = colorLimbs;
+                this.colorLimbsBack = 'rgba(149, 165, 166, 0.7)';
+                
+                this.time = 0;
+                this.speed = 0.16;
+            }
 
-    <div id="custom-dialog-overlay">
-        <div class="ff-window dialog-content">
-            <div id="dialog-message" style="margin-bottom: 20px; line-height: 1.5;"></div>
-            <div id="dialog-footer" style="font-size: 12px; color: #ccc;">[ Aボタンで閉じる ]</div>
-        </div>
-    </div>
-</div>
+            update() {
+                this.time += this.speed;
+            }
 
-<div id="control-panel">
-    <div class="d-pad">
-        <button class="pad-btn up" onpointerdown="handleMove(0, -1)">▲</button>
-        <button class="pad-btn left" onpointerdown="handleMove(-1, 0)">◀</button>
-        <button class="pad-btn right" onpointerdown="handleMove(1, 0)">▶</button>
-        <button class="pad-btn down" onpointerdown="handleMove(0, 1)">▼</button>
-    </div>
+            draw(ctx) {
+                const s = this.scale;
+                
+                // 重心の計算（腰の位置）: 地面(this.y)から腰の高さを設定
+                const centerY = this.y - 55 * s; 
 
-    <div class="action-group">
-        <button class="circle-btn btn-b" onpointerdown="handleB()">B</button>
-        <button class="circle-btn btn-a" onpointerdown="handleA()">A</button>
-    </div>
-</div>
+                // 上下動（バウンス）
+                const bouncePhase = Math.sin(this.time);
+                const bounce = Math.abs(bouncePhase) * -6 * s;
+                
+                const hipX = this.x;
+                const hipY = centerY + bounce;
 
-<script>
-/* --- ゲームデータ --- */
-const hero = { 
-    name: "勇者", 
-    x: 4, 
-    y: 7, 
-    hp: 100, 
-    maxHp: 100, 
-    mp: 20, 
-    maxMp: 20, 
-    atk: 15, 
-    mgc: 25, 
-    lv: 1, 
-    exp: 0, 
-    gold: 0, 
-    currentArea: "town_inside",
-    hasKey: false 
-};
+                // 前傾角度
+                const leanAngle = 0.31;
+                const torsoLength = 21 * s;
+                const shoulderX = hipX + Math.sin(leanAngle) * torsoLength;
+                const shoulderY = hipY - Math.cos(leanAngle) * torsoLength;
 
-const shopItems = [
-    { name: "銅の剣", price: 50, atk: 5 },
-    { name: "銀の剣", price: 150, atk: 15 },
-    { name: "黄金の剣", price: 500, atk: 50 }
-];
+                // 頭部の位置
+                const headDistance = 7.2 * s;
+                const headX = shoulderX + Math.sin(leanAngle + 0.1) * headDistance;
+                const headY = shoulderY - Math.cos(leanAngle + 0.1) * headDistance;
 
-const allyData = {
-    5: { id: "dog", name: "犬", hp: 60, maxHp: 60, atk: 12, img: "🐩", msg: "ワン！一緒に戦います！" },
-    6: { id: "bird", name: "きじ", hp: 40, maxHp: 40, atk: 20, img: "🦆", msg: "ケンケン！空から助けます！" },
-    7: { id: "monkey", name: "猿", hp: 80, maxHp: 80, atk: 10, img: "🐒", msg: "ウキッ！ボクも行くよ！" }
-};
+                // 奥側の手足
+                this.drawLeg(ctx, hipX, hipY, this.time + Math.PI, false);
+                this.drawArm(ctx, shoulderX, shoulderY, hipY, this.time + Math.PI, false);
+                
+                // 胴体と頭部
+                this.drawTorso(ctx, hipX, hipY, shoulderX, shoulderY, headX, headY);
+                
+                // 手前の手足
+                this.drawLeg(ctx, hipX, hipY, this.time, true);
+                this.drawArm(ctx, shoulderX, shoulderY, hipY, this.time, true);
+            }
 
-let party = [hero];
-let trueKingMet = false; 
-let prologueStep = 0;
+            drawTorso(ctx, hx, hy, sx, sy, headX, headY) {
+                const s = this.scale;
+                ctx.lineWidth = 3.6 * s;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = this.colorBody;
 
-const monsterTable = {
-    "green_field": [
-        { name: "ミチ生命体", hp: 30, atk: 8, exp: 40, gold: 20, img: "👽" }, 
-        { name: "大蛇", hp: 45, atk: 12, exp: 50, gold: 30, img: "🐍" }
-    ],
-    "wasteland": [
-        { name: "ならず者", hp: 60, atk: 15, exp: 60, gold: 40, img: "🤠" },
-        { name: "ハゲタカ", hp: 50, atk: 18, exp: 70, gold: 30, img: "🦅" }
-    ],
-    "lonely_desert": [
-        { name: "サソリ", hp: 70, atk: 22, exp: 90, gold: 50, img: "🦂" },
-        { name: "ミイラ", hp: 90, atk: 18, exp: 110, gold: 60, img: "🧟" }
-    ],
-    "ruined_village": [
-        { name: "うらみ", hp: 100, atk: 25, exp: 150, gold: 80, img: "👻" }
-    ],
-    "dark_forest": [
-        { name: "オオオトコ", hp: 80, atk: 20, exp: 120, gold: 60, img: "🧌" }, 
-        { name: "静電気", hp: 60, atk: 25, exp: 100, gold: 80, img: "🧞" }
-    ],
-    "lava_cave": [
-        { name: "ドクモリ", hp: 150, atk: 35, exp: 250, gold: 120, img: "🦇" }, 
-        { name: "ヒトクイジャック", hp: 180, atk: 30, exp: 300, gold: 150, img: "🎃" }
-    ],
-    "demon_castle": [
-        { name: "水神", hp: 400, atk: 55, exp: 600, gold: 300, img: "🐉" }, 
-        { name: "ヴィラン", hp: 500, atk: 60, exp: 800, gold: 500, img: "🦹" }
-    ]
-};
+                ctx.beginPath();
+                ctx.moveTo(hx, hy);
+                ctx.lineTo(sx, sy);
+                ctx.stroke();
 
-const worldMaps = {
-    "town_inside": {
-        name: "ポチの村",
-        data: [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,17,1],
-            [1,0,8,0,0,0,0,0,0,1],
-            [1,0,0,0,15,0,0,0,0,1],
-            [1,1,1,1,0,0,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,1],
-            [1,0,0,0,0,0,0,15,0,1],
-            [1,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,0,0,1,1,1,1],
-            [1,1,1,1,0,0,1,1,1,1]
-        ],
-        exits: { bottom: "green_field" },
-        npcs: [
-            { x: 4, y: 3, img: "👳", msg: "この村の北東に『古い鍵』が隠されているらしいぞ。" },
-            { x: 7, y: 6, img: "👧", msg: "魔王の城の門には、鍵がかかっているの。" }
-        ]
-    },
-    "green_field": { 
-        name: "始まりの平原", 
-        data: [
-            [1,1,1,1,0,0,1,1,1,1],
-            [1,0,10,10,10,10,10,10,10,0],
-            [1,10,10,10,5,10,10,10,10,1],
-            [1,2,1,1,10,1,1,1,10,1],
-            [1,10,10,10,10,10,10,10,14,1],
-            [1,1,1,10,3,10,10,1,1,1],
-            [1,10,10,10,1,1,10,10,10,1],
-            [1,10,1,1,1,10,10,1,10,1],
-            [1,10,10,10,10,10,10,10,10,1],
-            [1,1,1,1,0,0,1,1,1,1] 
-        ], 
-        exits: { right: "dark_forest", top: "town_inside", bottom: "wasteland" } 
-    },
-    "wasteland": {
-        name: "無法の荒地",
-        data: [
-            [1,1,1,1,0,0,1,1,1,1],
-            [1,20,20,20,20,20,2,20,20,1],
-            [1,20,1,1,20,1,1,20,20,1],
-            [1,20,20,20,20,20,20,20,20,0], 
-            [1,20,1,1,1,20,20,1,1,1],
-            [1,2,20,20,20,20,20,20,20,1],
-            [1,20,1,1,20,1,1,1,20,1],
-            [1,20,20,20,20,20,20,20,20,1],
-            [1,20,20,2,20,20,20,2,20,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ],
-        exits: { top: "green_field", right: "lonely_desert" }
-    },
-    "lonely_desert": {
-            name: "寂しい砂漠",
-            data: [
-                [1,1,1,1,0,0,1,1,1,1],
-                [1,21,21,21,21,21,21,21,21,1],
-                [1,21,1,1,1,1,1,1,21,1],
-                [0,21,1,21,21,21,21,21,21,1],
-                [1,21,1,21,25,21,21,21,21,1], // 25: かつての村の入り口 (🏚️)
-                [1,21,1,21,21,21,21,1,21,1],
-                [1,21,1,1,1,1,1,1,21,1],
-                [1,21,21,2,21,21,21,21,21,1],
-                [1,21,21,21,21,2,21,21,21,1],
-                [1,1,1,1,1,1,1,1,1,1]
-            ],
-            exits: { left: "wasteland", top: "dark_forest" }
-        },
-    "ruined_village": {
-        name: "かつての村",
-        data: [
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,22,22,22,22,22,22,22,22,1],
-            [1,22,1,1,22,22,1,1,22,1],
-            [1,22,1,23,22,22,24,1,22,1], // 23:お化け, 24:桃仙人
-            [1,22,22,22,22,22,22,22,22,1],
-            [1,22,22,1,1,1,1,22,22,1],
-            [1,22,22,22,22,22,22,22,22,1],
-            [1,1,22,22,22,22,22,22,1,1],
-            [1,1,1,1,0,0,1,1,1,1], // 下から砂漠に戻る
-            [1,1,1,1,1,1,1,1,1,1]
-        ],
-        exits: { bottom: "lonely_desert" }
-    },
-    "dark_forest": { 
-        name: "迷いの森", 
-        data: [
-            [1,1,1,1,1,1,1,1,1,1],
-            [0,11,2,11,11,6,11,11,2,1],
-            [1,11,1,1,11,1,11,1,11,1],
-            [1,11,1,11,11,2,11,1,11,1],
-            [1,2,1,11,7,1,11,1,11,1],
-            [1,11,11,11,11,11,11,11,11,0],
-            [1,1,1,1,1,1,11,1,1,1],
-            [1,11,11,11,2,11,11,1,11,1],
-            [1,11,1,1,1,1,1,1,11,1],
-            [1,1,1,1,0,0,1,1,1,1] 
-        ], 
-        exits: { left: "green_field", right: "lava_cave", bottom: "lonely_desert" } 
-    },
-    "lava_cave": { 
-        name: "火の洞窟", 
-        data: [
-            [1,1,1,1,1,1,1,1,1,1],
-            [0,12,12,12,12,12,12,2,12,1],
-            [1,1,1,1,12,1,1,1,12,1],
-            [1,2,12,12,12,1,8,12,12,1],
-            [1,12,1,1,1,1,12,1,1,1],
-            [1,12,12,12,12,2,12,12,12,0],
-            [1,1,1,1,1,1,1,1,12,1],
-            [1,2,12,12,12,12,12,2,12,1],
-            [1,12,1,1,1,1,1,1,1,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ], 
-        exits: { left: "dark_forest", right: "demon_castle" } 
-    },
-    "demon_castle": { 
-        name: "水の山", 
-        data: [
-            [1,1,1,1,4,1,1,1,1,1],
-            [1,13,13,13,16,13,13,13,13,1],
-            [1,13,1,1,1,1,1,1,13,1],
-            [1,2,1,13,13,13,13,1,2,1],
-            [1,13,13,13,1,1,13,13,13,1],
-            [0,13,1,2,1,1,2,1,13,1],
-            [1,13,1,13,13,13,13,1,13,1],
-            [1,13,13,13,1,1,13,13,13,1],
-            [1,1,1,1,1,1,1,1,1,1],
-            [1,1,1,1,1,1,1,1,1,1]
-        ], 
-        exits: { left: "lava_cave" } 
-    }
-};
+                const headRadius = 5.1 * s;
+                ctx.beginPath();
+                ctx.arc(headX, headY, headRadius, 0, Math.PI * 2);
+                ctx.fillStyle = this.colorBody;
+                ctx.fill();
 
-/* --- 状態管理 --- */
-let currentEnemy = null;
-let canAttack = true;
-let isBattle = false;
-let isBattleEnding = false;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(headX + 1.5 * s, headY - 0.6 * s, 0.9 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-/* --- コントローラー処理 --- */
-function handleMove(dx, dy) {
-    if (isBattle) return;
-    if (document.getElementById('custom-dialog-overlay').style.display === 'flex') return;
-    if (document.getElementById('prologue-screen').classList.contains('active')) return;
-    moveHero(dx, dy);
-}
+            drawArm(ctx, sx, sy, hipY, t, isFront) {
+                const s = this.scale;
+                const color = isFront ? this.colorLimbs : this.colorLimbsBack;
+                ctx.strokeStyle = color;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
 
-function handleA() {
-    const startScreen = document.getElementById('start-screen');
-    const prologueScreen = document.getElementById('prologue-screen');
-    const dialogOverlay = document.getElementById('custom-dialog-overlay');
-    const townActions = document.getElementById('town-actions');
-    const endingScreen = document.getElementById('ending-screen');
+                const armSwing = Math.sin(t + Math.PI);
+                const armForwardBack = armSwing * 13.5 * s;
+                const armCenterY = (sy + hipY) / 2;
+                
+                const elbowX = sx + armForwardBack;
+                const elbowY = armCenterY + (armSwing * 4.5 * s);
+                
+                const elbowAngle = armSwing > 0 ? 2.2 : 1.5;
+                const upperArmLen = 12 * s;
+                const lowerArmLen = 10.5 * s;
+                
+                const shoulderToElbowDx = elbowX - sx;
+                const shoulderToElbowDy = elbowY - sy;
+                const shoulderAngle = Math.atan2(shoulderToElbowDx, shoulderToElbowDy);
+                
+                const handX = elbowX + Math.sin(shoulderAngle + elbowAngle) * lowerArmLen;
+                const handY = elbowY + Math.cos(shoulderAngle + elbowAngle) * lowerArmLen;
 
-    if (dialogOverlay.style.display === 'flex') {
-        closeCustomDialog();
-        return;
-    }
+                ctx.lineWidth = 2.1 * s;
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(elbowX, elbowY);
+                ctx.lineTo(handX, handY);
+                ctx.stroke();
 
-    if (startScreen.classList.contains('active')) {
-        showScreen('prologue-screen');
-        return;
-    }
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(handX, handY, 1.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-    if (prologueScreen.classList.contains('active')) {
-        startPrologue();
-        return;
-    }
+            drawLeg(ctx, hx, hy, t, isFront) {
+                const s = this.scale;
+                const color = isFront ? this.colorLimbs : this.colorLimbsBack;
+                ctx.strokeStyle = color;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
 
-    if (endingScreen.classList.contains('active')) {
-        location.reload();
-        return;
-    }
+                const legSwing = Math.sin(t);
+                const hipAngle = legSwing * 0.75 + 0.45;
+                
+                let kneeAngle;
+                if (legSwing > 0) {
+                    kneeAngle = (Math.cos(t) + 1) * 1.1;
+                } else {
+                    kneeAngle = (Math.cos(t) + 1) * 0.25;
+                }
 
-    if (isBattle) {
-        if (isBattleEnding) {
-            confirmBattleResult();
-        } else if (canAttack) {
-            heroTurn('attack');
+                const thighLen = 16.5 * s;
+                const shinLen = 15 * s;
+
+                const kneeX = hx + Math.sin(hipAngle) * thighLen;
+                const kneeY = hy + Math.cos(hipAngle) * thighLen;
+                const ankleX = kneeX + Math.sin(hipAngle - kneeAngle) * shinLen;
+                const ankleY = kneeY + Math.cos(hipAngle - kneeAngle) * shinLen;
+
+                ctx.lineWidth = 2.7 * s;
+                ctx.beginPath();
+                ctx.moveTo(hx, hy);
+                ctx.lineTo(kneeX, kneeY);
+                ctx.lineTo(ankleX, ankleY);
+                ctx.stroke();
+
+                const footAngle = legSwing > 0 ? -0.2 : 0.1;
+                const footX = ankleX + Math.cos(footAngle) * 5.4 * s;
+                const footY = ankleY + Math.sin(footAngle) * 5.4 * s;
+                
+                ctx.lineWidth = 3.3 * s;
+                ctx.beginPath();
+                ctx.moveTo(ankleX, ankleY);
+                ctx.lineTo(footX, footY);
+                ctx.stroke();
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(footX, footY, 1.8 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
-        return;
-    }
 
-    if (townActions.style.display === 'block') {
-        rest();
-        return;
-    }
-}
 
-function handleB() {
-    console.log("Bボタン");
-}
+        // ==========================================
+        //  ゲームロジック
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const downBtn = document.getElementById('downBtn');
+        const rotateBtn = document.getElementById('rotateBtn');
+        const scoreDisplay = document.getElementById('score');
+        
+        // UX用オーバーレイ要素
+        const overlay = document.getElementById('overlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlayMessage = document.getElementById('overlayMessage');
+        const overlayBtn = document.getElementById('overlayBtn');
 
-/* --- ゲームロジック --- */
-function drawMap() {
-    const mapInfo = worldMaps[hero.currentArea];
-    document.getElementById('area-title').innerText = mapInfo.name;
-    const grid = document.getElementById('map-grid');
-    grid.innerHTML = '';
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            // padding分を引いて計算
+            const maxWidth = Math.min(600, container.clientWidth - 40);
+            canvas.style.width = maxWidth + 'px';
+            canvas.style.height = (maxWidth * 400 / 600) + 'px';
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
-    mapInfo.data.forEach((row, y) => {
-        row.forEach((type, x) => {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
+        const GRID_SIZE = 20;
+        const COLS = 30;
+        const ROWS = 20;
+        const HOLE_START = 10;
+        const HOLE_END = 20;
+        const HOLE_DEPTH = 12;
 
-            if (type === 1) cell.classList.add('wall');
-            if (type === 10) cell.classList.add('plain');
-            if (type === 11) cell.classList.add('forest');
-            if (type === 12) cell.classList.add('lava');
-            if (type === 13) cell.classList.add('mountain');
-            if (type === 20) cell.classList.add('wasteland');
-            if (type === 21) cell.classList.add('desert');
-            if (type === 22) cell.classList.add('ruins');
+        let gameRunning = false;
+        let score = 0;
+        
+        let stickman = { 
+            x: 1, 
+            y: 12.7, 
+            speed: 0.002, 
+            falling: false, 
+            fallY: 0,
+            renderer: null
+        };
+        
+        let grid = [];
+        let currentPiece = null;
+        let nextPieceTimer = 0;
+        let gameOver = false;
 
-            if (x === hero.x && y === hero.y) {
-                cell.innerText = '🚶';
-                cell.classList.add('hero');
-            } else if (type >= 5 && type <= 7) {
-                cell.innerText = allyData[type].img;
-            } else {
-                const icons = { 
-                    2: '👾', 3: '🏰', 4: '👹', 8: '🏬', 
-                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '🗃️',
-                    23: '👻', 24: '🍑', 25: '🏚️'
-                }; 
-                if (mapInfo.npcs) {
-                    const npc = mapInfo.npcs.find(n => n.x === x && n.y === y);
-                    if (npc) {
-                        cell.innerText = npc.img;
-                        grid.appendChild(cell);
-                        return;
+        const PIECES = [
+            [[1,1,1,1]], 
+            [[1,1],[1,1]], 
+            [[1,1,1],[0,1,0]], 
+            [[1,1,1],[1,0,0]], 
+            [[1,1,1],[0,0,1]], 
+            [[1,1,0],[0,1,1]], 
+            [[0,1,1],[1,1,0]] 
+        ];
+
+        const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+
+        function initGrid() {
+            grid = [];
+            for (let r = 0; r < ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    if (r >= HOLE_DEPTH && c >= HOLE_START && c < HOLE_END) {
+                        grid[r][c] = 0;
+                    } else if (r >= HOLE_DEPTH) {
+                        grid[r][c] = 1;
+                    } else {
+                        grid[r][c] = 0;
                     }
                 }
-                cell.innerText = icons[type] || '';
             }
-            grid.appendChild(cell);
-        });
-    });
-}
+        }
 
-function moveHero(dx, dy) {
-    let nx = hero.x + dx;
-    let ny = hero.y + dy;
-    const map = worldMaps[hero.currentArea];
+        function createPiece() {
+            const shapeIndex = Math.floor(Math.random() * PIECES.length);
+            const shape = PIECES[shapeIndex];
+            return {
+                shape: shape,
+                color: COLORS[shapeIndex],
+                x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2),
+                y: 0
+            };
+        }
 
-    // エリア移動処理
-    if (nx < 0 && map.exits.left) { 
-        hero.currentArea = map.exits.left; 
-        hero.x = 9; 
-        return afterMove(); 
-    }
-    if (nx > 9 && map.exits.right) { 
-        hero.currentArea = map.exits.right; 
-        hero.x = 0; 
-        return afterMove(); 
-    }
-    if (ny > 9 && map.exits.bottom) {
-        hero.currentArea = map.exits.bottom;
-        hero.x = (hero.currentArea === "lonely_desert") ? 4 : nx;
-        hero.y = 0; 
-        return afterMove();
-    }
-    if (ny < 0 && map.exits.top) {
-        hero.currentArea = map.exits.top;
-        hero.x = nx; 
-        hero.y = 9;
-        return afterMove();
-    }
+        function canPlace(piece, x, y) {
+            for (let r = 0; r < piece.shape.length; r++) {
+                for (let c = 0; c < piece.shape[r].length; c++) {
+                    if (piece.shape[r][c]) {
+                        const newY = y + r;
+                        const newX = x + c;
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) return false;
+                        if (newY >= 0 && grid[newY][newX] !== 0) return false;
+                    }
+                }
+            }
+            return true;
+        }
 
-    if (nx >= 0 && nx <= 9 && ny >= 0 && ny <= 9) {
-        const tile = map.data[ny][nx];
-        if (tile === 1) return; 
+        function placePiece(piece) {
+            for (let r = 0; r < piece.shape.length; r++) {
+                for (let c = 0; c < piece.shape[r].length; c++) {
+                    if (piece.shape[r][c]) {
+                        const y = piece.y + r;
+                        const x = piece.x + c;
+                        if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+                            grid[y][x] = 2;
+                        }
+                    }
+                }
+            }
+        }
 
-        if (tile === 16) {
-            if (hero.hasKey) {
-                showAlert("鍵を使って扉を開けた！");
-                map.data[ny][nx] = 0; 
+        function rotatePiece(piece) {
+            const newShape = piece.shape[0].map((_, i) =>
+                piece.shape.map(row => row[i]).reverse()
+            );
+            const newPiece = { ...piece, shape: newShape };
+            if (canPlace(newPiece, newPiece.x, newPiece.y)) {
+                piece.shape = newShape;
+            }
+        }
+
+        function movePiece(dx, dy) {
+            if (!currentPiece || !gameRunning) return;
+            const newX = currentPiece.x + dx;
+            const newY = currentPiece.y + dy;
+            
+            if (canPlace(currentPiece, newX, newY)) {
+                currentPiece.x = newX;
+                currentPiece.y = newY;
+                draw();
+                return true;
+            }
+            return false;
+        }
+
+        function canWalk(x) {
+            const col = Math.floor(x);
+            if (col < 0 || col >= COLS) return true;
+            const footY = Math.floor(stickman.y) + 1;
+            
+            if (col >= HOLE_START && col < HOLE_END) {
+                if (footY < ROWS && grid[footY][col] !== 0) {
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const cellWidth = canvas.width / COLS;
+            const cellHeight = canvas.height / ROWS;
+            
+            // 背景（地面・ブロック）
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (grid[r][c] === 1) {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.fillRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight);
+                        ctx.strokeStyle = '#654321';
+                        ctx.strokeRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight);
+                    } else if (grid[r][c] === 2) {
+                        ctx.fillStyle = '#FFA500';
+                        ctx.fillRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight);
+                        ctx.strokeStyle = '#FF8C00';
+                        ctx.strokeRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight);
+                    }
+                }
+            }
+            
+            // 穴の背景
+            ctx.fillStyle = '#333';
+            for (let r = HOLE_DEPTH; r < ROWS; r++) {
+                for (let c = HOLE_START; c < HOLE_END; c++) {
+                    if (grid[r][c] === 0) {
+                        ctx.fillRect(c * cellWidth, r * cellHeight, cellWidth, cellHeight);
+                    }
+                }
+            }
+            
+            // 操作中のブロック
+            if (currentPiece) {
+                ctx.fillStyle = currentPiece.color;
+                for (let r = 0; r < currentPiece.shape.length; r++) {
+                    for (let c = 0; c < currentPiece.shape[r].length; c++) {
+                        if (currentPiece.shape[r][c]) {
+                            ctx.fillRect(
+                                (currentPiece.x + c) * cellWidth,
+                                (currentPiece.y + r) * cellHeight,
+                                cellWidth,
+                                cellHeight
+                            );
+                            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                            ctx.strokeRect(
+                                (currentPiece.x + c) * cellWidth,
+                                (currentPiece.y + r) * cellHeight,
+                                cellWidth,
+                                cellHeight
+                            );
+                        }
+                    }
+                }
+            }
+            
+            // ------------------------------------------
+            // リアル棒人間の描画
+            // ------------------------------------------
+            if (stickman.renderer) {
+                const runnerScale = (cellHeight / 40) * 3.0;
+                const pixelX = stickman.x * cellWidth + (cellWidth / 2);
+                const pixelY = (stickman.y + 0.8) * cellHeight; 
+
+                stickman.renderer.x = pixelX;
+                stickman.renderer.y = pixelY;
+                stickman.renderer.scale = runnerScale;
+
+                if (stickman.falling) {
+                    stickman.renderer.y += stickman.fallY;
+                    stickman.fallY += 2;
+                    stickman.renderer.draw(ctx);
+                } else {
+                    stickman.renderer.draw(ctx);
+                }
+            }
+        }
+        
+        // オーバーレイ表示関数（UX向上）
+        function showOverlay(title, msg, success) {
+            overlayTitle.textContent = title;
+            overlayTitle.style.color = success ? '#FFD700' : '#FF6B6B';
+            overlayMessage.innerHTML = msg;
+            overlay.style.display = 'flex';
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // ブロック落下
+            if (currentPiece) {
+                nextPieceTimer++;
+                if (nextPieceTimer > 60) {
+                    if (!movePiece(0, 1)) {
+                        placePiece(currentPiece);
+                        currentPiece = null;
+                        nextPieceTimer = 0;
+                    } else {
+                        nextPieceTimer = 0;
+                    }
+                }
             } else {
-                showAlert("鍵がかかっていて進めない。");
-                return;
+                nextPieceTimer++;
+                if (nextPieceTimer > 30) {
+                    currentPiece = createPiece();
+                    nextPieceTimer = 0;
+                }
             }
-        }
-
-        hero.x = nx; 
-        hero.y = ny;
-
-        if (tile === 25) { // 村への入り口
-            hero.currentArea = "ruined_village";
-            hero.x = 4;
-            hero.y = 7;
-            showAlert("かつての村に入った...");
-            return afterMove();
-        }
-
-        if (tile === 3) {
-            if (trueKingMet) {
-                startNiseousamaBattle();
-                return;
+            
+            // 棒人間の移動判定
+            if (canWalk(stickman.x + stickman.speed)) {
+                stickman.x += stickman.speed;
+                if (stickman.renderer) {
+                    stickman.renderer.update();
+                }
+                
+                // ゴール判定
+                if (stickman.x > HOLE_END && !gameOver) {
+                    score += 100;
+                    scoreDisplay.textContent = 'スコア: ' + score;
+                    gameOver = true;
+                    gameRunning = false;
+                    
+                    // アラートの代わりにオーバーレイ表示
+                    setTimeout(() => {
+                        showOverlay(
+                            '🎉 成功! 🎉', 
+                            'おめでとう!<br>リアルな彼を助けました!<br><br>スコア: ' + score, 
+                            true
+                        );
+                    }, 500);
+                }
             } else {
-                showAlert("今は忙しい。川を調べてきてくれ。");
-                hero.y++; 
+                // 落下
+                if (!stickman.falling) {
+                    stickman.falling = true;
+                    stickman.fallY = 0;
+                    
+                    setTimeout(() => {
+                        gameRunning = false;
+                        gameOver = true;
+                        
+                        // アラートの代わりにオーバーレイ表示
+                        showOverlay(
+                            'ゲームオーバー', 
+                            '彼が穴に落ちてしまいました...<br><br>スコア: ' + score, 
+                            false
+                        );
+                    }, 1500);
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            gameRunning = false;
+            score = 0;
+            stickman = { 
+                x: 1, 
+                y: 13.2, 
+                speed: 0.002, 
+                falling: false, 
+                fallY: 0,
+                renderer: new RunningStickman(0, 0, 1.0)
+            };
+            
+            currentPiece = null;
+            nextPieceTimer = 0;
+            gameOver = false;
+            initGrid();
+            scoreDisplay.textContent = 'スコア: 0';
+            startBtn.textContent = 'スタート';
+            
+            // オーバーレイを隠す
+            overlay.style.display = 'none';
+            
+            draw();
+        }
+
+        function startGame() {
+            if (!gameRunning) {
+                if (gameOver) {
+                    resetGame();
+                    setTimeout(() => {
+                        gameRunning = true;
+                        gameOver = false;
+                        startBtn.textContent = 'リセット';
+                        gameLoop();
+                    }, 100);
+                } else {
+                    gameRunning = true;
+                    gameOver = false;
+                    startBtn.textContent = 'リセット';
+                    gameLoop();
+                }
+            } else {
+                resetGame();
             }
         }
-        if (tile >= 5 && tile <= 7) addAlly(tile);
-        if (tile === 2) startBattle();
-        if (tile === 14) {
-            hero.gold += 100;
-            showAlert("宝箱を開けた！\n100ゴールド手に入れた！");
-            map.data[ny][nx] = 19;
-        }
-        if (tile === 17) {
-            hero.hasKey = true;
-            showAlert("宝箱から『古い鍵』を見つけた！");
-            map.data[ny][nx] = 19;
-        }
-        if (tile === 15) {
-            const npc = map.npcs.find(n => n.x === nx && n.y === ny);
-            if (npc) showAlert(npc.msg);
-        }
-        if (tile === 8) showShop(); 
-        if (tile === 4) triggerBossEvent();
-        if (tile === 23) showAlert("幽霊:「ここはかつての村…すべては魔王に奪われた…」");
-        if (tile === 24) startMomoBattle();
-
-        if ((tile === 10 || tile === 11 || tile === 20 || tile === 21 || tile === 22) && Math.random() < 0.15) {
-            startBattle();
-        }
-    }
-    afterMove();
-}
-
-function afterMove() {
-    updateNPCs();
-    drawMap(); 
-    updateStatus();
-}
-
-function updateNPCs() {
-    const map = worldMaps[hero.currentArea];
-    if (map.npcs) {
-        map.npcs.forEach(npc => {
-            const directions = [[0,1], [0,-1], [1,0], [-1,0]];
-            const dir = directions[Math.floor(Math.random() * directions.length)];
-            const tx = npc.x + dir[0];
-            const ty = npc.y + dir[1];
-            if (tx >= 0 && tx <= 9 && ty >= 0 && ty <= 9 && map.data[ty][tx] === 0 && !(tx === hero.x && ty === hero.y)) {
-                npc.x = tx;
-                npc.y = ty;
-            }
+        
+        // オーバーレイのボタンにもリセット機能を割り当て
+        overlayBtn.addEventListener('click', () => {
+            resetGame();
+            startGame();
         });
-    }
-}
 
-function addAlly(type) {
-    const ally = allyData[type];
-    if (!party.find(m => m.name === ally.name)) {
-        party.push({ ...ally });
-        worldMaps[hero.currentArea].data[hero.y][hero.x] = 0; 
-        drawMap();
-        updateStatus();
-        showAlert(`${ally.name}:「${ally.msg}」\n\n${ally.name}が仲間に加わった！`);
-    }
-}
-
-/* --- シナリオイベント --- */
-function startPrologue() {
-    const textElem = document.getElementById('prologue-text');
-    if (prologueStep === 0) {
-        let name = prompt("お主の名前を教えてくれ（カタカナ4文字以内）", "ユウシャ");
-        if (!name) name = "ユウシャ";
-        hero.name = name.substring(0, 4);
-        textElem.innerText = `王様：「そうじゃった、${hero.name}よ。頼みがある。」`;
-        prologueStep++;
-    } else if (prologueStep === 1) {
-        textElem.innerText = "王様：「最近、街の川の流れが悪くなっておるのじゃ。」";
-        prologueStep++;
-    } else if (prologueStep === 2) {
-        textElem.innerText = "王様：「何者かが川上で悪さをしているのかもしれん。」";
-        prologueStep++;
-    } else if (prologueStep === 3) {
-        textElem.innerText = `王様：「${hero.name}よ、川上を調べてきてはくれまいか？」`;
-        prologueStep++;
-    } else {
-        showScreen('main-screen');
-        drawMap();
-        updateStatus();
-        showAlert("王様に頼まれ、冒険が始まった！");
-    }
-}
-
-function triggerBossEvent() {
-    const choice = confirm("水源に魔王がいます。戦いますか？");
-    if (choice) {
-        startBossBattle();
-    } else {
-        const joinChoice = confirm("私が元王様だ。水源の岩をどかすのを手伝ってくれんか？");
-        if (joinChoice) {
-            trueKingMet = true;
-            showAlert("ありがとう。街の王は偽物だ。懲らしめてくれ。");
-        } else {
-            startBossBattle();
+        // イベント設定
+        startBtn.addEventListener('click', startGame);
+        
+        let buttonInterval = null;
+        function startButtonPress(action) {
+            if (!gameRunning) return;
+            action();
+            buttonInterval = setInterval(action, 100);
         }
-    }
-}
-
-function startNiseousamaBattle() {
-    showAlert("オウサマニア:「バレたか。邪魔者は消えよ！！！！」");
-    isBattle = true;
-    isBattleEnding = false;
-    currentEnemy = { 
-        name: "オウサマニア", 
-        hp: 1200, 
-        atk: 70, 
-        exp: 0, 
-        gold: 0, 
-        img: 'images/niseousama.png' // "images/"
-    };
-    initBattle();
-}
-
-function startMomoBattle() {
-    showAlert("桃仙人:「かつての村を荒らすのはお主か？ 試練を与えよう！」");
-    isBattle = true;
-    isBattleEnding = false;
-    currentEnemy = { 
-        name: "桃仙人", 
-        hp: 800, 
-        atk: 45, 
-        exp: 1000, 
-        gold: 500, 
-        img: 'images/momosennin.png' // "images/"
-    };
-    initBattle();
-}
-
-/* --- 戦闘システム --- */
-function startBattle() {
-    isBattle = true;
-    isBattleEnding = false;
-    const areaMonsters = monsterTable[hero.currentArea] || monsterTable["green_field"];
-    const randomIndex = Math.floor(Math.random() * areaMonsters.length);
-    currentEnemy = { ...areaMonsters[randomIndex] };
-    initBattle();
-}
-
-function startBossBattle() {
-    isBattle = true;
-    isBattleEnding = false;
-    currentEnemy = { name: "魔王", hp: 1000, atk: 60, exp: 0, gold: 0, img: "👹" };
-    initBattle();
-}
-
-function initBattle() {
-    canAttack = true;
-    document.getElementById('monster-name').innerText = currentEnemy.name;
-    
-    // 画像か絵文字かを判定
-    if (currentEnemy.img.endsWith('.jpg') || currentEnemy.img.endsWith('.png')) {
-        document.getElementById('monster-sprite').innerHTML = `<img src="${currentEnemy.img}" alt="${currentEnemy.name}">`;
-    } else {
-        document.getElementById('monster-sprite').innerHTML = currentEnemy.img;
-    }
-
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
-    updateBattleStatus();
-    showScreen('battle-screen');
-}
-
-function updateBattleStatus() {
-    const area = document.getElementById('party-status-area');
-    area.innerHTML = '<div style="border-bottom: 1px solid #fff; margin-bottom: 5px;">NAME HP</div>';
-    party.forEach(m => {
-        const displayHp = m.hp > 0 ? m.hp : 0;
-        area.innerHTML += `<div class="status-row" style="display:flex; justify-content:space-between;"><span>${m.name}</span><span>${displayHp}/${m.maxHp}</span></div>`;
-    });
-}
-
-function heroTurn(action) {
-    if (!canAttack) return;
-    canAttack = false;
-    performAttack(hero);
-
-    if (currentEnemy.hp > 0) {
-        setTimeout(partyTurn, 800);
-    } else {
-        setTimeout(winBattle, 800);
-    }
-}
-
-function partyTurn() {
-    let index = 1;
-    function nextAlly() {
-        if (currentEnemy.hp <= 0) { winBattle(); return; }
-        if (index < party.length) {
-            const member = party[index];
-            if (member.hp > 0) { performAttack(member); index++; setTimeout(nextAlly, 800); }
-            else { index++; nextAlly(); }
-        } else {
-            if (currentEnemy.hp > 0) setTimeout(enemyTurn, 800);
-            else winBattle();
+        function stopButtonPress() {
+            if (buttonInterval) {
+                clearInterval(buttonInterval);
+                buttonInterval = null;
+            }
         }
-    }
-    nextAlly();
-}
+        
+        // タッチイベントのUX最適化ヘルパー
+        function addTouchControls(btn, action) {
+            // マウス
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                btn.classList.add('active'); // 視覚フィードバック用
+                startButtonPress(action);
+            });
+            window.addEventListener('mouseup', () => {
+                btn.classList.remove('active');
+                stopButtonPress();
+            });
 
-function performAttack(attacker) {
-    let dmg = attacker.atk + Math.floor(Math.random() * 10);
-    currentEnemy.hp -= dmg;
-    document.getElementById('battle-log').innerText = `${attacker.name}の攻撃！${currentEnemy.name}に${dmg}のダメージ！`;
-    updateBattleStatus();
-}
-
-function enemyTurn() {
-    const aliveMembers = party.filter(m => m.hp > 0);
-    if (aliveMembers.length === 0) return; 
-    const target = aliveMembers[Math.floor(Math.random() * aliveMembers.length)];
-    let dmg = Math.max(1, currentEnemy.atk - 5);
-    target.hp -= dmg;
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`;
-    updateBattleStatus();
-
-    if (hero.hp <= 0) { 
-        showAlert("勇者が力尽きた..."); 
-        setTimeout(() => location.reload(), 2000); 
-    } else { 
-        setTimeout(() => { 
-            canAttack = true; 
-            document.getElementById('battle-log').innerText = "コマンドを選んでください (Aボタン)"; 
-        }, 800); 
-    }
-}
-
-function winBattle() {
-    isBattleEnding = true;
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}を倒した！ (Aボタンで進む)`;
-}
-
-function confirmBattleResult() {
-    isBattle = false;
-    isBattleEnding = false;
-    if (currentEnemy.name === "魔王") {
-        document.getElementById('ending-msg').innerText = `こうして街の川は穏やかな流れを取り戻した。`;
-        showScreen('ending-screen');
-    } else if (currentEnemy.name === "オウサマニア") {
-        document.getElementById('ending-title').innerText = "TRUE ENDING";
-        document.getElementById('ending-msg').innerText = `偽の王を追い出し、本物の王が街に戻った！`;
-        showScreen('ending-screen');
-    } else {
-        if (currentEnemy.name === "桃仙人") {
-            showAlert("桃仙人:「見事だ。お主に真の力を授けよう。」\n勇者の攻撃力が大幅にアップした！");
-            hero.atk += 30;
-            worldMaps["ruined_village"].data[3][6] = 22; // 桃仙人を床に戻す
+            // タッチ (passive: false でスクロール防止)
+            btn.addEventListener('touchstart', (e) => {
+                if (e.cancelable) e.preventDefault(); // ダブルタップズーム防止の要
+                btn.classList.add('active');
+                startButtonPress(action);
+            }, { passive: false });
+            
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                btn.classList.remove('active');
+                stopButtonPress();
+            });
+            
+            // タッチがボタン外に出た場合などのキャンセル
+            btn.addEventListener('touchcancel', () => {
+                btn.classList.remove('active');
+                stopButtonPress();
+            });
         }
-        hero.exp += currentEnemy.exp;
-        hero.gold += (currentEnemy.gold || 0); 
-        const map = worldMaps[hero.currentArea];
-        if (map.data[hero.y][hero.x] === 2) map.data[hero.y][hero.x] = 22;
-        showScreen('main-screen'); 
-        drawMap(); 
-        updateStatus();
-        checkLevelUp();
-    }
-}
+        
+        addTouchControls(leftBtn, () => movePiece(-1, 0));
+        addTouchControls(rightBtn, () => movePiece(1, 0));
+        addTouchControls(downBtn, () => movePiece(0, 1));
+        
+        // 回転ボタン（長押し不要、単発クリック）
+        const handleRotate = (e) => {
+            if(e.cancelable) e.preventDefault();
+            rotateBtn.classList.add('active');
+            if (currentPiece && gameRunning) {
+                rotatePiece(currentPiece);
+                draw();
+            }
+            setTimeout(() => rotateBtn.classList.remove('active'), 100);
+        };
+        
+        rotateBtn.addEventListener('mousedown', handleRotate);
+        rotateBtn.addEventListener('touchstart', handleRotate, { passive: false });
 
-/* --- システム関数 --- */
-function checkLevelUp() { 
-    if (hero.exp >= hero.lv * 100) { 
-        hero.lv++; 
-        hero.atk += 10; 
-        hero.maxHp += 20; 
-        hero.hp = hero.maxHp; 
-        showAlert(`レベルアップ！ LV ${hero.lv}\n攻撃力とHPが上がった！`); 
-    } 
-}
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            if (e.key === 'ArrowLeft') movePiece(-1, 0);
+            if (e.key === 'ArrowRight') movePiece(1, 0);
+            if (e.key === 'ArrowDown') movePiece(0, 1);
+            if (e.key === 'ArrowUp' || e.key === ' ') currentPiece && rotatePiece(currentPiece);
+        });
 
-function rest() { 
-    hero.hp = hero.maxHp; 
-    hero.mp = hero.maxMp; 
-    updateStatus(); 
-    showAlert("宿屋で休んで全快した！"); 
-}
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        // キャンバス上のスワイプ操作（UX向上: 感度調整）
+        canvas.addEventListener('touchstart', (e) => {
+            // スクロール防止
+            if(e.cancelable) e.preventDefault(); 
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: false });
 
-function updateStatus() { 
-    document.getElementById('st-hp').innerText = `HP: ${hero.hp}/${hero.maxHp} | Gold: ${hero.gold}G | 鍵: ${hero.hasKey ? '持' : '無'}`; 
-    document.getElementById('st-party').innerText = `一行: [${hero.name}] ` + party.slice(1).map(m => m.name).join(", "); 
-}
+        canvas.addEventListener('touchmove', (e) => {
+            if(e.cancelable) e.preventDefault();
+            if (!gameRunning) return;
+            
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            
+            const diffX = touchX - touchStartX;
+            const diffY = touchY - touchStartY;
+            
+            // X方向の移動（感度閾値 20px）
+            if (Math.abs(diffX) > 20) {
+                if (diffX > 0) movePiece(1, 0);
+                else movePiece(-1, 0);
+                touchStartX = touchX; // 連続移動のために基準点を更新
+            }
+            
+            // 下方向へのフリック（高速落下）
+            if (diffY > 40) {
+                movePiece(0, 1);
+                touchStartY = touchY;
+            }
+            
+        }, { passive: false });
+        
+        // タップで回転
+        canvas.addEventListener('touchend', (e) => {
+           // 移動量が少なければ回転とみなす（タップ判定）
+           // startとendの座標保持が必要だが、簡易的にtouchmoveが発火していなければ回転とするロジックも可
+           // 今回はシンプルに既存ロジック優先で、スワイプのみ実装
+        });
+        
+        // 画面全体のスクロール防止（ゲーム領域内）
+        document.body.addEventListener('touchmove', function(e) {
+            // ゲームコンテナ内でのタッチはスクロールさせない
+            if (e.target.closest('#gameContainer')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
-function showScreen(id) { 
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
-    document.getElementById(id).classList.add('active'); 
-}
-
-function showAlert(text) { 
-    document.getElementById('dialog-message').innerText = text; 
-    document.getElementById('custom-dialog-overlay').style.display = 'flex'; 
-}
-
-function closeCustomDialog() { 
-    document.getElementById('custom-dialog-overlay').style.display = 'none'; 
-}
-
-function showShop() {
-    let msg = "武器屋 (番号入力):\n";
-    shopItems.forEach((item, index) => { msg += `${index}: ${item.name} (${item.price}G)\n`; });
-    const choice = prompt(msg);
-    if (choice !== null && shopItems[choice]) {
-        const item = shopItems[choice];
-        if (hero.gold >= item.price) { 
-            hero.gold -= item.price; 
-            hero.atk += item.atk; 
-            showAlert(`${item.name}を購入！`); 
-            updateStatus(); 
-        } else { showAlert("ゴールドが足りません！"); }
-    }
-}
-
-document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
-</script>
+        // 初回初期化
+        initGrid();
+        stickman.renderer = new RunningStickman(0, 0, 1.0);
+        draw();
+    </script>
 </body>
 </html>
