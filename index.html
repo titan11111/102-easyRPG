@@ -46,14 +46,27 @@
             display: block; 
         }
 
-        /* ウィンドウデザイン */
+        /* ウィンドウデザイン（FF風） */
         .ff-window {
             background: linear-gradient(180deg, #00008b 0%, #000044 100%);
             border: 3px solid #eee;
             border-radius: 8px;
-            box-shadow: inset 0 0 5px #000;
+            box-shadow: inset 0 0 5px #000, 0 0 10px rgba(0, 150, 255, 0.3);
             padding: 10px;
             box-sizing: border-box;
+            position: relative;
+        }
+
+        .ff-window::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 5px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
 
         /* カスタムダイアログ */
@@ -132,7 +145,7 @@
         }
 
         .enemy-area { 
-            height: 40%; 
+            height: 35%; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
@@ -152,9 +165,11 @@
 
         .battle-ui { 
             display: flex; 
-            height: 120px; 
+            height: 240px; 
+            min-height: 240px;
             gap: 5px; 
             padding: 5px; 
+            flex-shrink: 0;
         }
 
         .command-box { 
@@ -168,24 +183,312 @@
             font-size: 14px; 
             border-bottom: 1px solid rgba(255,255,255,0.1); 
             list-style: none; 
+            position: relative;
+            transition: background-color 0.2s;
+        }
+
+        .command-box li:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* FF風カーソルアニメーション */
+        .command-cursor {
+            animation: cursorBlink 1s infinite;
+        }
+
+        @keyframes cursorBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
         }
 
         .status-box { 
             width: 60%; 
             text-align: left; 
-            font-size: 14px; 
-            overflow-y: auto; 
+            font-size: 12px; 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
         }
 
         #battle-log { 
             width: 95%; 
-            height: 50px; 
+            height: 80px; 
             margin: 5px auto; 
             background: rgba(0,0,0,0.8); 
             border: 1px solid #fff; 
             padding: 5px; 
             font-size: 14px; 
-            overflow: hidden; 
+            overflow-y: auto; 
+            overflow-x: hidden;
+        }
+
+        /* ダメージ数値表示 */
+        .damage-number {
+            position: absolute;
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 2px 2px 0 #000, 0 0 10px #ff0000;
+            pointer-events: none;
+            z-index: 100;
+            animation: damageFloat 1s ease-out forwards;
+        }
+
+        @keyframes damageFloat {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-80px) scale(1.5);
+            }
+        }
+
+        /* クリティカルヒット表示 */
+        .critical-text {
+            position: absolute;
+            font-size: 32px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 2px 2px 0 #000, 0 0 15px #ffff00;
+            pointer-events: none;
+            z-index: 101;
+            animation: criticalPulse 1.5s ease-out forwards;
+        }
+
+        @keyframes criticalPulse {
+            0% {
+                opacity: 1;
+                transform: scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1);
+            }
+        }
+
+        /* 画面フラッシュエフェクト */
+        .battle-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            z-index: 200;
+            animation: flashEffect 0.2s ease-out;
+        }
+
+        @keyframes flashEffect {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        /* HPバー */
+        .hp-bar-container {
+            width: 100%;
+            height: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #fff;
+            margin: 2px 0;
+            position: relative;
+        }
+
+        .hp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+            transition: width 0.5s ease-out;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .hp-bar-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 10px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #000;
+            z-index: 10;
+        }
+
+        /* ステータス行のコンパクト化 */
+        .status-row {
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+
+        .status-row-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-size: 11px;
+        }
+
+        /* 敵のHPバー */
+        .enemy-hp-bar {
+            width: 80%;
+            max-width: 300px;
+            margin: 10px auto;
+        }
+
+        /* FF風戦闘開始演出 */
+        .battle-start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            pointer-events: none;
+        }
+
+        .battle-start-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            animation: battleStartAnimation 2s ease-out forwards;
+        }
+
+        @keyframes battleStartAnimation {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            20% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            40% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        /* FF風勝利演出 */
+        .victory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            pointer-events: none;
+        }
+
+        .victory-text {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 0 0 20px #ffff00, 0 0 40px #ffff00;
+            margin-bottom: 20px;
+            animation: victoryPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes victoryPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.9;
+            }
+        }
+
+        .victory-rewards {
+            font-size: 20px;
+            color: #fff;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* FF風レベルアップ演出 */
+        .levelup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 400;
+            pointer-events: none;
+        }
+
+        .levelup-text {
+            font-size: 56px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            animation: levelupAnimation 2.5s ease-out forwards;
+        }
+
+        @keyframes levelupAnimation {
+            0% {
+                opacity: 0;
+                transform: translateY(50px) scale(0.5);
+            }
+            30% {
+                opacity: 1;
+                transform: translateY(0) scale(1.2);
+            }
+            60% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+        }
+
+        .levelup-stats {
+            font-size: 24px;
+            color: #ffff00;
+            margin-top: 20px;
+            text-align: center;
+            opacity: 0;
+            animation: levelupStatsAnimation 2.5s ease-out forwards;
+        }
+
+        @keyframes levelupStatsAnimation {
+            0%, 40% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            60% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
         }
 
         /* コントロールパネル */
@@ -310,11 +613,15 @@
         <div class="enemy-area">
             <div id="monster-sprite" class="monster-sprite"></div>
             <div id="monster-name">モンスター</div>
+            <div id="enemy-hp-bar" class="enemy-hp-bar hp-bar-container" style="display:none;">
+                <div id="enemy-hp-bar-fill" class="hp-bar" style="width: 100%;"></div>
+                <div id="enemy-hp-bar-text" class="hp-bar-text">HP: 100/100</div>
+            </div>
         </div>
         <div class="battle-ui">
             <div class="ff-window command-box">
                 <ul id="command-list" style="margin:0; padding:0;">
-                    <li id="cmd-attack">▶ たたかう (A)</li>
+                    <li id="cmd-attack"><span class="command-cursor">▶</span> たたかう (A)</li>
                 </ul>
             </div>
             <div class="ff-window status-box" id="party-status-area"></div>
@@ -338,6 +645,29 @@
     </div>
 </div>
 
+<!-- BGM管理 -->
+<audio id="bgm-title" loop preload="auto">
+    <source src="audio/title.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-prologue" loop preload="auto">
+    <source src="audio/prologue.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-town" loop preload="auto">
+    <source src="audio/town.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-field" loop preload="auto">
+    <source src="audio/field.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-battle" loop preload="auto">
+    <source src="audio/battle.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-boss" loop preload="auto">
+    <source src="audio/boss.mp3" type="audio/mpeg">
+</audio>
+<audio id="bgm-ending" loop preload="auto">
+    <source src="audio/ending.mp3" type="audio/mpeg">
+</audio>
+
 <div id="control-panel">
     <div class="d-pad">
         <button class="pad-btn up" onpointerdown="handleMove(0, -1)">▲</button>
@@ -353,7 +683,199 @@
 </div>
 
 <script>
-/* --- ゲームデータ --- */
+/* ============================================
+   定数定義
+   ============================================ */
+const TILE = {
+    WALL: 1,
+    ENEMY: 2,
+    CASTLE: 3,
+    BOSS: 4,
+    ALLY_DOG: 5,
+    ALLY_BIRD: 6,
+    ALLY_MONKEY: 7,
+    SHOP: 8,
+    EMPTY: 0,
+    PLAIN: 10,
+    FOREST: 11,
+    LAVA: 12,
+    MOUNTAIN: 13,
+    TREASURE_GOLD: 14,
+    NPC: 15,
+    DOOR: 16,
+    TREASURE_KEY: 17,
+    TREASURE_OPENED: 19,
+    WASTELAND: 20,
+    DESERT: 21,
+    RUINS: 22,
+    GHOST: 23,
+    MOMO: 24,
+    VILLAGE_ENTRANCE: 25
+};
+
+const MAP_SIZE = {
+    WIDTH: 10,
+    HEIGHT: 10,
+    MAX_X: 9,
+    MAX_Y: 9
+};
+
+const BATTLE = {
+    TURN_DELAY: 800,
+    ENCOUNTER_RATE: 0.15,
+    DAMAGE_VARIANCE: 10,
+    DEFENSE_REDUCTION: 5
+};
+
+const LEVEL_UP = {
+    EXP_MULTIPLIER: 100,
+    ATK_BONUS: 10,
+    HP_BONUS: 20
+};
+
+const TREASURE = {
+    GOLD_AMOUNT: 100
+};
+
+const IMAGE_EXTENSIONS = ['.jpg', '.png'];
+
+/* ============================================
+   音楽管理システム
+   ============================================ */
+const BGM_VOLUME = 0.7; // 70%音量
+let currentBGM = null;
+let audioContextUnlocked = false; // iOS Safari対応フラグ
+
+// エリア別BGMマッピング
+const AREA_BGM_MAP = {
+    "town_inside": "bgm-town",
+    "green_field": "bgm-field",
+    "wasteland": "bgm-field",
+    "lonely_desert": "bgm-field",
+    "ruined_village": "bgm-field",
+    "dark_forest": "bgm-field",
+    "lava_cave": "bgm-field",
+    "demon_castle": "bgm-field"
+};
+
+/**
+ * iOS Safari対応: ユーザー操作で音声コンテキストをアンロック
+ */
+function unlockAudioContext() {
+    if (audioContextUnlocked) return;
+    
+    try {
+        // 全てのaudio要素を一度再生・停止してアンロック
+        const audioElements = document.querySelectorAll('audio');
+        const unlockPromises = Array.from(audioElements).map(audio => {
+            const promise = audio.play();
+            if (promise !== undefined) {
+                return promise
+                    .then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    })
+                    .catch(() => {
+                        // エラーは無視（まだロックされている可能性）
+                    });
+            }
+        });
+        
+        Promise.all(unlockPromises).then(() => {
+            audioContextUnlocked = true;
+            console.log('音声コンテキストをアンロックしました');
+        });
+    } catch (error) {
+        console.error('音声コンテキストアンロックエラー:', error);
+    }
+}
+
+/**
+ * 全てのBGMを停止
+ */
+function stopAllBGM() {
+    try {
+        const bgmIds = [
+            'bgm-title', 'bgm-prologue', 'bgm-town', 'bgm-field',
+            'bgm-battle', 'bgm-boss', 'bgm-ending'
+        ];
+        
+        bgmIds.forEach(id => {
+            const audio = document.getElementById(id);
+            if (audio) {
+                audio.pause();
+                audio.currentTime = 0;
+            }
+        });
+        
+        currentBGM = null;
+    } catch (error) {
+        console.error('BGM停止エラー:', error);
+    }
+}
+
+/**
+ * BGMを再生
+ */
+function playBGM(bgmId) {
+    try {
+        // 同じBGMが既に再生中の場合は何もしない
+        if (currentBGM && currentBGM.id === bgmId && !currentBGM.paused) {
+            return;
+        }
+        
+        // 現在のBGMを停止
+        stopAllBGM();
+        
+        const audio = document.getElementById(bgmId);
+        if (!audio) {
+            console.warn(`BGM要素が見つかりません: ${bgmId}`);
+            return;
+        }
+        
+        // 音楽ファイルの存在確認（エラーイベントで検出）
+        audio.addEventListener('error', function onError() {
+            console.warn(`BGMファイルが見つかりません: ${bgmId} (audio/${bgmId.replace('bgm-', '')}.mp3)`);
+            audio.removeEventListener('error', onError);
+        }, { once: true });
+        
+        // 音量設定
+        audio.volume = BGM_VOLUME;
+        currentBGM = audio;
+        
+        // 再生
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    console.log(`BGM再生: ${bgmId}`);
+                })
+                .catch(error => {
+                    console.error(`BGM再生エラー (${bgmId}):`, error);
+                    // iOS Safariの場合、ユーザー操作が必要な可能性がある
+                    if (!audioContextUnlocked) {
+                        unlockAudioContext();
+                    }
+                    currentBGM = null;
+                });
+        }
+    } catch (error) {
+        console.error('BGM再生エラー:', error);
+        currentBGM = null;
+    }
+}
+
+/**
+ * エリアに応じたBGMを再生
+ */
+function playAreaBGM(areaId) {
+    const bgmId = AREA_BGM_MAP[areaId] || 'bgm-field';
+    playBGM(bgmId);
+}
+
+/* ============================================
+   ゲームデータ
+   ============================================ */
 const hero = { 
     name: "勇者", 
     x: 4, 
@@ -552,14 +1074,23 @@ const worldMaps = {
     }
 };
 
-/* --- 状態管理 --- */
+/* ============================================
+   状態管理
+   ============================================ */
 let currentEnemy = null;
 let canAttack = true;
 let isBattle = false;
 let isBattleEnding = false;
 
-/* --- コントローラー処理 --- */
+/* ============================================
+   コントローラー処理
+   ============================================ */
 function handleMove(dx, dy) {
+    // iOS Safari対応: 最初のユーザー操作で音声をアンロック
+    if (!audioContextUnlocked) {
+        unlockAudioContext();
+    }
+    
     if (isBattle) return;
     if (document.getElementById('custom-dialog-overlay').style.display === 'flex') return;
     if (document.getElementById('prologue-screen').classList.contains('active')) return;
@@ -567,32 +1098,47 @@ function handleMove(dx, dy) {
 }
 
 function handleA() {
+    // iOS Safari対応: 最初のユーザー操作で音声をアンロック
+    if (!audioContextUnlocked) {
+        unlockAudioContext();
+    }
+    
+    const dialogOverlay = document.getElementById('custom-dialog-overlay');
     const startScreen = document.getElementById('start-screen');
     const prologueScreen = document.getElementById('prologue-screen');
-    const dialogOverlay = document.getElementById('custom-dialog-overlay');
-    const townActions = document.getElementById('town-actions');
     const endingScreen = document.getElementById('ending-screen');
+    const townActions = document.getElementById('town-actions');
 
+    // ダイアログが開いている場合は閉じる
     if (dialogOverlay.style.display === 'flex') {
         closeCustomDialog();
         return;
     }
 
+    // タイトル画面
     if (startScreen.classList.contains('active')) {
+        // タイトルBGMを停止してからプロローグへ
+        stopAllBGM();
         showScreen('prologue-screen');
+        playBGM('bgm-prologue');
         return;
     }
 
+    // プロローグ画面
     if (prologueScreen.classList.contains('active')) {
         startPrologue();
         return;
     }
 
+    // エンディング画面
     if (endingScreen.classList.contains('active')) {
+        // BGMを停止してからリロード
+        stopAllBGM();
         location.reload();
         return;
     }
 
+    // 戦闘中
     if (isBattle) {
         if (isBattleEnding) {
             confirmBattleResult();
@@ -602,6 +1148,7 @@ function handleA() {
         return;
     }
 
+    // 宿屋アクション
     if (townActions.style.display === 'block') {
         rest();
         return;
@@ -612,7 +1159,9 @@ function handleB() {
     console.log("Bボタン");
 }
 
-/* --- ゲームロジック --- */
+/* ============================================
+   マップ描画
+   ============================================ */
 function drawMap() {
     const mapInfo = worldMaps[hero.currentArea];
     document.getElementById('area-title').innerText = mapInfo.name;
@@ -624,25 +1173,38 @@ function drawMap() {
             const cell = document.createElement('div');
             cell.className = 'cell';
 
-            if (type === 1) cell.classList.add('wall');
-            if (type === 10) cell.classList.add('plain');
-            if (type === 11) cell.classList.add('forest');
-            if (type === 12) cell.classList.add('lava');
-            if (type === 13) cell.classList.add('mountain');
-            if (type === 20) cell.classList.add('wasteland');
-            if (type === 21) cell.classList.add('desert');
-            if (type === 22) cell.classList.add('ruins');
+            // 地形タイプのクラス設定
+            if (type === TILE.WALL) cell.classList.add('wall');
+            if (type === TILE.PLAIN) cell.classList.add('plain');
+            if (type === TILE.FOREST) cell.classList.add('forest');
+            if (type === TILE.LAVA) cell.classList.add('lava');
+            if (type === TILE.MOUNTAIN) cell.classList.add('mountain');
+            if (type === TILE.WASTELAND) cell.classList.add('wasteland');
+            if (type === TILE.DESERT) cell.classList.add('desert');
+            if (type === TILE.RUINS) cell.classList.add('ruins');
 
+            // ヒーローの位置
             if (x === hero.x && y === hero.y) {
                 cell.innerText = '🚶';
                 cell.classList.add('hero');
-            } else if (type >= 5 && type <= 7) {
+            } else if (type >= TILE.ALLY_DOG && type <= TILE.ALLY_MONKEY) {
+                // 仲間キャラクター
                 cell.innerText = allyData[type].img;
             } else {
+                // その他のオブジェクト
                 const icons = { 
-                    2: '👾', 3: '🏰', 4: '👹', 8: '🏬', 
-                    14: '🎁', 15: '👳', 16: '🚪', 17: '🎁', 19: '🗃️',
-                    23: '👻', 24: '🍑', 25: '🏚️'
+                    [TILE.ENEMY]: '👾', 
+                    [TILE.CASTLE]: '🏰', 
+                    [TILE.BOSS]: '👹', 
+                    [TILE.SHOP]: '🏬', 
+                    [TILE.TREASURE_GOLD]: '🎁', 
+                    [TILE.NPC]: '👳', 
+                    [TILE.DOOR]: '🚪', 
+                    [TILE.TREASURE_KEY]: '🎁', 
+                    [TILE.TREASURE_OPENED]: '🗃️',
+                    [TILE.GHOST]: '👻', 
+                    [TILE.MOMO]: '🍑', 
+                    [TILE.VILLAGE_ENTRANCE]: '🏚️'
                 }; 
                 if (mapInfo.npcs) {
                     const npc = mapInfo.npcs.find(n => n.x === x && n.y === y);
@@ -659,6 +1221,9 @@ function drawMap() {
     });
 }
 
+/* ============================================
+   移動・イベント処理
+   ============================================ */
 function moveHero(dx, dy) {
     let nx = hero.x + dx;
     let ny = hero.y + dy;
@@ -667,15 +1232,15 @@ function moveHero(dx, dy) {
     // エリア移動処理
     if (nx < 0 && map.exits.left) { 
         hero.currentArea = map.exits.left; 
-        hero.x = 9; 
+        hero.x = MAP_SIZE.MAX_X; 
         return afterMove(); 
     }
-    if (nx > 9 && map.exits.right) { 
+    if (nx > MAP_SIZE.MAX_X && map.exits.right) { 
         hero.currentArea = map.exits.right; 
         hero.x = 0; 
         return afterMove(); 
     }
-    if (ny > 9 && map.exits.bottom) {
+    if (ny > MAP_SIZE.MAX_Y && map.exits.bottom) {
         hero.currentArea = map.exits.bottom;
         hero.x = (hero.currentArea === "lonely_desert") ? 4 : nx;
         hero.y = 0; 
@@ -684,18 +1249,22 @@ function moveHero(dx, dy) {
     if (ny < 0 && map.exits.top) {
         hero.currentArea = map.exits.top;
         hero.x = nx; 
-        hero.y = 9;
+        hero.y = MAP_SIZE.MAX_Y;
         return afterMove();
     }
 
-    if (nx >= 0 && nx <= 9 && ny >= 0 && ny <= 9) {
+    // マップ内の移動
+    if (nx >= 0 && nx <= MAP_SIZE.MAX_X && ny >= 0 && ny <= MAP_SIZE.MAX_Y) {
         const tile = map.data[ny][nx];
-        if (tile === 1) return; 
+        
+        // 壁チェック
+        if (tile === TILE.WALL) return; 
 
-        if (tile === 16) {
+        // 扉の処理
+        if (tile === TILE.DOOR) {
             if (hero.hasKey) {
                 showAlert("鍵を使って扉を開けた！");
-                map.data[ny][nx] = 0; 
+                map.data[ny][nx] = TILE.EMPTY; 
             } else {
                 showAlert("鍵がかかっていて進めない。");
                 return;
@@ -705,55 +1274,90 @@ function moveHero(dx, dy) {
         hero.x = nx; 
         hero.y = ny;
 
-        if (tile === 25) { // 村への入り口
-            hero.currentArea = "ruined_village";
-            hero.x = 4;
-            hero.y = 7;
-            showAlert("かつての村に入った...");
-            return afterMove();
-        }
-
-        if (tile === 3) {
-            if (trueKingMet) {
-                startNiseousamaBattle();
-                return;
-            } else {
-                showAlert("今は忙しい。川を調べてきてくれ。");
-                hero.y++; 
-            }
-        }
-        if (tile >= 5 && tile <= 7) addAlly(tile);
-        if (tile === 2) startBattle();
-        if (tile === 14) {
-            hero.gold += 100;
-            showAlert("宝箱を開けた！\n100ゴールド手に入れた！");
-            map.data[ny][nx] = 19;
-        }
-        if (tile === 17) {
-            hero.hasKey = true;
-            showAlert("宝箱から『古い鍵』を見つけた！");
-            map.data[ny][nx] = 19;
-        }
-        if (tile === 15) {
-            const npc = map.npcs.find(n => n.x === nx && n.y === ny);
-            if (npc) showAlert(npc.msg);
-        }
-        if (tile === 8) showShop(); 
-        if (tile === 4) triggerBossEvent();
-        if (tile === 23) showAlert("「ここはかつての村…すべてはあいつに奪われた…」");
-        if (tile === 24) startMomoBattle();
-
-        if ((tile === 10 || tile === 11 || tile === 20 || tile === 21 || tile === 22) && Math.random() < 0.15) {
+        // タイルイベント処理
+        handleTileEvent(tile, nx, ny, map);
+        
+        // ランダムエンカウント
+        if (isEncounterableTile(tile) && Math.random() < BATTLE.ENCOUNTER_RATE) {
             startBattle();
         }
     }
     afterMove();
 }
 
+/**
+ * タイルイベントを処理
+ */
+function handleTileEvent(tile, x, y, map) {
+    switch (tile) {
+        case TILE.VILLAGE_ENTRANCE:
+            hero.currentArea = "ruined_village";
+            hero.x = 4;
+            hero.y = 7;
+            showAlert("かつての村に入った...");
+            break;
+        case TILE.CASTLE:
+            if (trueKingMet) {
+                startNiseousamaBattle();
+            } else {
+                showAlert("今は忙しい。川を調べてきてくれ。");
+                hero.y++; 
+            }
+            break;
+        case TILE.ALLY_DOG:
+        case TILE.ALLY_BIRD:
+        case TILE.ALLY_MONKEY:
+            addAlly(tile);
+            break;
+        case TILE.ENEMY:
+            startBattle();
+            break;
+        case TILE.TREASURE_GOLD:
+            hero.gold += TREASURE.GOLD_AMOUNT;
+            showAlert("宝箱を開けた！\n100ゴールド手に入れた！");
+            map.data[y][x] = TILE.TREASURE_OPENED;
+            break;
+        case TILE.TREASURE_KEY:
+            hero.hasKey = true;
+            showAlert("宝箱から『古い鍵』を見つけた！");
+            map.data[y][x] = TILE.TREASURE_OPENED;
+            break;
+        case TILE.NPC:
+            const npc = map.npcs?.find(n => n.x === x && n.y === y);
+            if (npc) showAlert(npc.msg);
+            break;
+        case TILE.SHOP:
+            showShop(); 
+            break;
+        case TILE.BOSS:
+            triggerBossEvent();
+            break;
+        case TILE.GHOST:
+            showAlert("「ここはかつての村…すべてはあいつに奪われた…」");
+            break;
+        case TILE.MOMO:
+            startMomoBattle();
+            break;
+    }
+}
+
+/**
+ * エンカウント可能なタイルか判定
+ */
+function isEncounterableTile(tile) {
+    return tile === TILE.PLAIN || 
+           tile === TILE.FOREST || 
+           tile === TILE.WASTELAND || 
+           tile === TILE.DESERT || 
+           tile === TILE.RUINS;
+}
+
 function afterMove() {
     updateNPCs();
     drawMap(); 
     updateStatus();
+    // エリア変更時にBGMを切り替え
+    playAreaBGM(hero.currentArea);
 }
 
 function updateNPCs() {
@@ -764,7 +1368,10 @@ function updateNPCs() {
             const dir = directions[Math.floor(Math.random() * directions.length)];
             const tx = npc.x + dir[0];
             const ty = npc.y + dir[1];
-            if (tx >= 0 && tx <= 9 && ty >= 0 && ty <= 9 && map.data[ty][tx] === 0 && !(tx === hero.x && ty === hero.y)) {
+            if (tx >= 0 && tx <= MAP_SIZE.MAX_X && 
+                ty >= 0 && ty <= MAP_SIZE.MAX_Y && 
+                map.data[ty][tx] === TILE.EMPTY && 
+                !(tx === hero.x && ty === hero.y)) {
                 npc.x = tx;
                 npc.y = ty;
             }
@@ -776,14 +1383,16 @@ function addAlly(type) {
     const ally = allyData[type];
     if (!party.find(m => m.name === ally.name)) {
         party.push({ ...ally });
-        worldMaps[hero.currentArea].data[hero.y][hero.x] = 0; 
+        worldMaps[hero.currentArea].data[hero.y][hero.x] = TILE.EMPTY; 
         drawMap();
         updateStatus();
         showAlert(`${ally.name}:「${ally.msg}」\n\n${ally.name}が仲間に加わった！`);
     }
 }
 
-/* --- シナリオイベント --- */
+/* ============================================
+   シナリオイベント
+   ============================================ */
 function startPrologue() {
     const textElem = document.getElementById('prologue-text');
     if (prologueStep === 0) {
@@ -805,6 +1414,7 @@ function startPrologue() {
         showScreen('main-screen');
         drawMap();
         updateStatus();
+        playAreaBGM(hero.currentArea);
         showAlert("王様に頼まれ、冒険が始まった！");
     }
 }
@@ -854,7 +1464,9 @@ function startMomoBattle() {
     initBattle();
 }
 
-/* --- 戦闘システム --- */
+/* ============================================
+   戦闘システム
+   ============================================ */
 function startBattle() {
     isBattle = true;
     isBattleEnding = false;
@@ -875,25 +1487,121 @@ function initBattle() {
     canAttack = true;
     document.getElementById('monster-name').innerText = currentEnemy.name;
     
+    // 敵の最大HPを保存（HPバー表示用）
+    if (!currentEnemy.maxHp) {
+        currentEnemy.maxHp = currentEnemy.hp;
+    }
+    
     // 画像か絵文字かを判定
-    if (currentEnemy.img.endsWith('.jpg') || currentEnemy.img.endsWith('.png')) {
+    const isImage = IMAGE_EXTENSIONS.some(ext => currentEnemy.img.endsWith(ext));
+    if (isImage) {
         document.getElementById('monster-sprite').innerHTML = `<img src="${currentEnemy.img}" alt="${currentEnemy.name}">`;
     } else {
         document.getElementById('monster-sprite').innerHTML = currentEnemy.img;
     }
 
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}があらわれた！`;
+    // 戦闘ログをクリア
+    const battleLog = document.getElementById('battle-log');
+    battleLog.innerHTML = '';
+    
     updateBattleStatus();
+    updateEnemyHPBar();
     showScreen('battle-screen');
+    
+    // FF風戦闘開始演出
+    showBattleStartAnimation();
+    
+    // ボス戦か通常戦闘かでBGMを切り替え
+    if (currentEnemy.name === "魔王" || currentEnemy.name === "オウサマニア" || currentEnemy.name === "桃仙人") {
+        playBGM('bgm-boss');
+    } else {
+        playBGM('bgm-battle');
+    }
+}
+
+/**
+ * FF風戦闘開始演出
+ */
+function showBattleStartAnimation() {
+    const overlay = document.createElement('div');
+    overlay.className = 'battle-start-overlay';
+    const text = document.createElement('div');
+    text.className = 'battle-start-text';
+    text.innerText = '戦闘開始！';
+    overlay.appendChild(text);
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+        addBattleLog(`${currentEnemy.name}があらわれた！`);
+        overlay.remove();
+    }, 2000);
 }
 
 function updateBattleStatus() {
     const area = document.getElementById('party-status-area');
-    area.innerHTML = '<div style="border-bottom: 1px solid #fff; margin-bottom: 5px;">NAME HP</div>';
-    party.forEach(m => {
-        const displayHp = m.hp > 0 ? m.hp : 0;
-        area.innerHTML += `<div class="status-row" style="display:flex; justify-content:space-between;"><span>${m.name}</span><span>${displayHp}/${m.maxHp}</span></div>`;
-    });
+    area.innerHTML = '<div style="border-bottom: 1px solid #fff; margin-bottom: 3px; padding-bottom: 2px; font-weight: bold; font-size: 11px;">NAME HP</div>';
+    
+    // 最大4人の枠を確保（パーティメンバー + 空き枠）
+    const maxSlots = 4;
+    for (let i = 0; i < maxSlots; i++) {
+        if (i < party.length) {
+            // パーティメンバーがいる場合
+            const m = party[i];
+            const displayHp = m.hp > 0 ? m.hp : 0;
+            const hpPercent = (displayHp / m.maxHp) * 100;
+            area.innerHTML += `
+                <div class="status-row">
+                    <div class="status-row-header">
+                        <span>${m.name}</span>
+                        <span>${displayHp}/${m.maxHp}</span>
+                    </div>
+                    <div class="hp-bar-container" style="width: 100%;">
+                        <div class="hp-bar" style="width: ${hpPercent}%;"></div>
+                        <div class="hp-bar-text">${displayHp}/${m.maxHp}</div>
+                    </div>
+                </div>`;
+        } else {
+            // 空き枠（薄く表示）
+            area.innerHTML += `
+                <div class="status-row" style="opacity: 0.3;">
+                    <div class="status-row-header">
+                        <span>---</span>
+                        <span>-/-</span>
+                    </div>
+                    <div class="hp-bar-container" style="width: 100%;">
+                        <div class="hp-bar" style="width: 0%;"></div>
+                        <div class="hp-bar-text">-/-</div>
+                    </div>
+                </div>`;
+        }
+    }
+}
+
+/**
+ * 敵のHPバーを更新
+ */
+function updateEnemyHPBar() {
+    const hpBar = document.getElementById('enemy-hp-bar');
+    const hpBarFill = document.getElementById('enemy-hp-bar-fill');
+    const hpBarText = document.getElementById('enemy-hp-bar-text');
+    
+    if (!currentEnemy || !currentEnemy.maxHp) return;
+    
+    const hpPercent = Math.max(0, (currentEnemy.hp / currentEnemy.maxHp) * 100);
+    hpBar.style.display = 'block';
+    hpBarFill.style.width = `${hpPercent}%`;
+    hpBarText.innerText = `HP: ${Math.max(0, currentEnemy.hp)}/${currentEnemy.maxHp}`;
+}
+
+/**
+ * 戦闘ログにメッセージを追加（スクロール対応）
+ */
+function addBattleLog(message) {
+    const battleLog = document.getElementById('battle-log');
+    const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    battleLog.innerHTML += `<div>${message}</div>`;
+    // 最新のメッセージにスクロール
+    battleLog.scrollTop = battleLog.scrollHeight;
 }
 
 function heroTurn(action) {
@@ -902,9 +1610,9 @@ function heroTurn(action) {
     performAttack(hero);
 
     if (currentEnemy.hp > 0) {
-        setTimeout(partyTurn, 800);
+        setTimeout(partyTurn, BATTLE.TURN_DELAY);
     } else {
-        setTimeout(winBattle, 800);
+        setTimeout(winBattle, BATTLE.TURN_DELAY);
     }
 }
 
@@ -914,46 +1622,198 @@ function partyTurn() {
         if (currentEnemy.hp <= 0) { winBattle(); return; }
         if (index < party.length) {
             const member = party[index];
-            if (member.hp > 0) { performAttack(member); index++; setTimeout(nextAlly, 800); }
-            else { index++; nextAlly(); }
+            if (member.hp > 0) { 
+                performAttack(member); 
+                index++; 
+                setTimeout(nextAlly, BATTLE.TURN_DELAY); 
         } else {
-            if (currentEnemy.hp > 0) setTimeout(enemyTurn, 800);
-            else winBattle();
+                index++; 
+                nextAlly(); 
+            }
+        } else {
+            if (currentEnemy.hp > 0) {
+                setTimeout(enemyTurn, BATTLE.TURN_DELAY);
+            } else {
+                winBattle();
+            }
         }
     }
     nextAlly();
 }
 
 function performAttack(attacker) {
-    let dmg = attacker.atk + Math.floor(Math.random() * 10);
-    currentEnemy.hp -= dmg;
-    document.getElementById('battle-log').innerText = `${attacker.name}の攻撃！${currentEnemy.name}に${dmg}のダメージ！`;
+    // クリティカル判定（10%の確率）
+    const isCritical = Math.random() < 0.1;
+    let dmg = attacker.atk + Math.floor(Math.random() * BATTLE.DAMAGE_VARIANCE);
+    
+    if (isCritical) {
+        dmg = Math.floor(dmg * 1.5); // クリティカルは1.5倍
+    }
+    
+    currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+    
+    // 画面フラッシュエフェクト
+    showBattleFlash();
+    
+    // ダメージ数値表示
+    showDamageNumber(dmg, isCritical);
+    
+    // クリティカルメッセージ
+    if (isCritical) {
+        showCriticalText();
+        addBattleLog(`${attacker.name}の会心の一撃！${currentEnemy.name}に${dmg}のダメージ！`);
+    } else {
+        addBattleLog(`${attacker.name}の攻撃！${currentEnemy.name}に${dmg}のダメージ！`);
+    }
+    
     updateBattleStatus();
+    updateEnemyHPBar();
+}
+
+/**
+ * ダメージ数値を表示
+ */
+function showDamageNumber(damage, isCritical) {
+    const enemyArea = document.querySelector('.enemy-area');
+    const damageElement = document.createElement('div');
+    damageElement.className = 'damage-number';
+    damageElement.innerText = `-${damage}`;
+    
+    if (isCritical) {
+        damageElement.style.color = '#ffff00';
+        damageElement.style.fontSize = '56px';
+        damageElement.style.textShadow = '2px 2px 0 #000, 0 0 15px #ffff00';
+    }
+    
+    // 敵の中心位置に配置
+    const rect = enemyArea.getBoundingClientRect();
+    damageElement.style.left = `${rect.left + rect.width / 2 - 50}px`;
+    damageElement.style.top = `${rect.top + rect.height / 2 - 40}px`;
+    
+    document.body.appendChild(damageElement);
+    
+    // アニメーション終了後に削除
+    setTimeout(() => {
+        damageElement.remove();
+    }, 1000);
+}
+
+/**
+ * クリティカルテキストを表示
+ */
+function showCriticalText() {
+    const enemyArea = document.querySelector('.enemy-area');
+    const criticalElement = document.createElement('div');
+    criticalElement.className = 'critical-text';
+    criticalElement.innerText = '会心の一撃！';
+    
+    const rect = enemyArea.getBoundingClientRect();
+    criticalElement.style.left = `${rect.left + rect.width / 2 - 100}px`;
+    criticalElement.style.top = `${rect.top + 20}px`;
+    
+    document.body.appendChild(criticalElement);
+    
+    setTimeout(() => {
+        criticalElement.remove();
+    }, 1500);
+}
+
+/**
+ * 画面フラッシュエフェクト
+ */
+function showBattleFlash() {
+    const flash = document.createElement('div');
+    flash.className = 'battle-flash';
+    document.body.appendChild(flash);
+    
+    setTimeout(() => {
+        flash.remove();
+    }, 200);
 }
 
 function enemyTurn() {
     const aliveMembers = party.filter(m => m.hp > 0);
     if (aliveMembers.length === 0) return; 
     const target = aliveMembers[Math.floor(Math.random() * aliveMembers.length)];
-    let dmg = Math.max(1, currentEnemy.atk - 5);
-    target.hp -= dmg;
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`;
+    const dmg = Math.max(1, currentEnemy.atk - BATTLE.DEFENSE_REDUCTION);
+    target.hp = Math.max(0, target.hp - dmg);
+    
+    // 敵の攻撃時もフラッシュとダメージ表示（味方の位置に表示）
+    showBattleFlash();
+    showDamageNumberOnParty(dmg, target);
+    
+    addBattleLog(`${currentEnemy.name}の攻撃！${target.name}は${dmg}のダメージ！`);
     updateBattleStatus();
 
     if (hero.hp <= 0) { 
+        addBattleLog("勇者が力尽きた...");
         showAlert("勇者が力尽きた..."); 
         setTimeout(() => location.reload(), 2000); 
     } else { 
         setTimeout(() => { 
             canAttack = true; 
-            document.getElementById('battle-log').innerText = "コマンドを選んでください (Aボタン)"; 
-        }, 800); 
+            addBattleLog("コマンドを選んでください (Aボタン)");
+        }, BATTLE.TURN_DELAY); 
     }
+}
+
+/**
+ * 味方へのダメージ数値を表示
+ */
+function showDamageNumberOnParty(damage, target) {
+    const statusArea = document.getElementById('party-status-area');
+    const damageElement = document.createElement('div');
+    damageElement.className = 'damage-number';
+    damageElement.innerText = `-${damage}`;
+    damageElement.style.color = '#ff6666'; // 味方へのダメージは少し薄めの赤
+    
+    // ステータスエリア内の該当メンバーの位置に表示
+    const rect = statusArea.getBoundingClientRect();
+    damageElement.style.left = `${rect.right - 100}px`;
+    damageElement.style.top = `${rect.top + 30}px`; // 最初のメンバーの位置
+    
+    document.body.appendChild(damageElement);
+    
+    setTimeout(() => {
+        damageElement.remove();
+    }, 1000);
 }
 
 function winBattle() {
     isBattleEnding = true;
-    document.getElementById('battle-log').innerText = `${currentEnemy.name}を倒した！ (Aボタンで進む)`;
+    addBattleLog(`${currentEnemy.name}を倒した！`);
+    
+    // FF風勝利演出
+    showVictoryAnimation();
+}
+
+/**
+ * FF風勝利演出
+ */
+function showVictoryAnimation() {
+    const overlay = document.createElement('div');
+    overlay.className = 'victory-overlay';
+    
+    const victoryText = document.createElement('div');
+    victoryText.className = 'victory-text';
+    victoryText.innerText = '勝利！';
+    overlay.appendChild(victoryText);
+    
+    const rewards = document.createElement('div');
+    rewards.className = 'victory-rewards';
+    let rewardText = `経験値: ${currentEnemy.exp}`;
+    if (currentEnemy.gold > 0) {
+        rewardText += `\nゴールド: ${currentEnemy.gold}G`;
+    }
+    rewards.innerText = rewardText;
+    overlay.appendChild(rewards);
+    
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+        addBattleLog('(Aボタンで進む)');
+    }, 2500);
 }
 
 function confirmBattleResult() {
@@ -962,36 +1822,72 @@ function confirmBattleResult() {
     if (currentEnemy.name === "魔王") {
         document.getElementById('ending-msg').innerText = `こうして街の川は穏やかな流れを取り戻した。`;
         showScreen('ending-screen');
+        playBGM('bgm-ending');
     } else if (currentEnemy.name === "オウサマニア") {
         document.getElementById('ending-title').innerText = "TRUE ENDING";
         document.getElementById('ending-msg').innerText = `偽の王を追い出し、本物の王が街に戻った！`;
         showScreen('ending-screen');
+        playBGM('bgm-ending');
     } else {
         if (currentEnemy.name === "桃仙人") {
             showAlert("桃仙人:「見事だ。お主に真の力を授けよう。」\n勇者の攻撃力が大幅にアップした！");
             hero.atk += 30;
-            worldMaps["ruined_village"].data[3][6] = 22; // 桃仙人を床に戻す
+            worldMaps["ruined_village"].data[3][6] = TILE.RUINS; // 桃仙人を床に戻す
         }
         hero.exp += currentEnemy.exp;
         hero.gold += (currentEnemy.gold || 0); 
         const map = worldMaps[hero.currentArea];
-        if (map.data[hero.y][hero.x] === 2) map.data[hero.y][hero.x] = 22;
+        if (map.data[hero.y][hero.x] === TILE.ENEMY) {
+            map.data[hero.y][hero.x] = TILE.RUINS;
+        }
         showScreen('main-screen'); 
         drawMap(); 
         updateStatus();
+        playAreaBGM(hero.currentArea);
         checkLevelUp();
     }
 }
 
-/* --- システム関数 --- */
+/* ============================================
+   システム関数
+   ============================================ */
 function checkLevelUp() { 
-    if (hero.exp >= hero.lv * 100) { 
+    const requiredExp = hero.lv * LEVEL_UP.EXP_MULTIPLIER;
+    if (hero.exp >= requiredExp) { 
+        const oldLv = hero.lv;
         hero.lv++; 
-        hero.atk += 10; 
-        hero.maxHp += 20; 
+        hero.atk += LEVEL_UP.ATK_BONUS; 
+        hero.maxHp += LEVEL_UP.HP_BONUS; 
         hero.hp = hero.maxHp; 
-        showAlert(`レベルアップ！ LV ${hero.lv}\n攻撃力とHPが上がった！`); 
+        
+        // FF風レベルアップ演出
+        showLevelUpAnimation(oldLv, hero.lv);
     } 
+}
+
+/**
+ * FF風レベルアップ演出
+ */
+function showLevelUpAnimation(oldLv, newLv) {
+    const overlay = document.createElement('div');
+    overlay.className = 'levelup-overlay';
+    
+    const levelupText = document.createElement('div');
+    levelupText.className = 'levelup-text';
+    levelupText.innerText = `レベルアップ！`;
+    overlay.appendChild(levelupText);
+    
+    const stats = document.createElement('div');
+    stats.className = 'levelup-stats';
+    stats.innerHTML = `LV ${oldLv} → LV ${newLv}<br>攻撃力 +${LEVEL_UP.ATK_BONUS}<br>最大HP +${LEVEL_UP.HP_BONUS}`;
+    overlay.appendChild(stats);
+    
+    document.body.appendChild(overlay);
+    
+    setTimeout(() => {
+        overlay.remove();
+        showAlert(`レベルアップ！ LV ${newLv}\n攻撃力とHPが上がった！`);
+    }, 2500);
 }
 
 function rest() { 
@@ -1036,6 +1932,13 @@ function showShop() {
 }
 
 document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+// ページ読み込み時の初期化
+window.addEventListener('load', function() {
+    // タイトルBGMは準備のみ（ユーザー操作後に再生）
+    // 実際の再生は handleA() でユーザーがAボタンを押した時に行う
+    console.log('ゲーム初期化完了');
+});
 </script>
 </body>
 </html>
